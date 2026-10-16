@@ -1,14 +1,16 @@
 /* Service worker for Khatana Dairy Manager — offline-first app shell. */
-const CACHE = 'khatana-dairy-v1';
+const CACHE = 'khatana-dairy-v2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './firebase-config.js',
   './cloud.js',
+  './extras.js',
   './vendor/firebase-app-compat.js',
   './vendor/firebase-auth-compat.js',
   './vendor/firebase-firestore-compat.js',
+  './vendor/jspdf.umd.min.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];

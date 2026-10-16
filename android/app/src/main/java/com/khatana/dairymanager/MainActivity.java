@@ -1,9 +1,12 @@
 package com.khatana.dairymanager;
 
 import android.app.Activity;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.KeyEvent;
 import android.webkit.JavascriptInterface;
@@ -17,6 +20,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -30,10 +35,10 @@ import java.util.Properties;
 /**
  * WebView shell for the Khatana Dairy Manager PWA.
  *
- * It also exposes a small native bridge (window.AndroidBridge) that runs the
- * Google OAuth 2.0 Authorization Code + PKCE flow in the system browser and
- * talks to the Google Drive API directly, so Google Sign-In and Drive backup
- * work inside the app without any third-party SDK.
+ * It also exposes a native bridge (window.AndroidBridge) that runs the
+ * Google OAuth 2.0 Authorization Code + PKCE flow in the system browser,
+ * talks to the Google Drive API, and handles sharing / downloading files
+ * and sending SMS — all without any third-party SDK.
  */
 public class MainActivity extends Activity {
 
@@ -67,7 +72,19 @@ public class MainActivity extends Activity {
         s.setAllowFileAccessFromFileURLs(true);
         s.setAllowUniversalAccessFromFileURLs(true);
         s.setMediaPlaybackRequiresUserGesture(false);
-        webView.setWebViewClient(new WebViewClient());
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url == null || url.startsWith("file://")) return false;
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                } catch (Exception e) {
+                    toastMsg("कोई ऐप नहीं मिला");
+                }
+                return true;
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new Bridge(), "AndroidBridge");
         setContentView(webView);
@@ -107,8 +124,7 @@ public class MainActivity extends Activity {
     private void handleIntent(Intent intent) {
         if (intent == null || intent.getData() == null) return;
         Uri data = intent.getData();
-        String s = data.toString();
-        if (s.indexOf("oauth2redirect") == -1) return;
+        if (data.toString().indexOf("oauth2redirect") == -1) return;
         String code = data.getQueryParameter("code");
         String error = data.getQueryParameter("error");
         if (code != null) {
@@ -127,7 +143,7 @@ public class MainActivity extends Activity {
         return super.onKeyDown(keyCode, event);
     }
 
-    /* -------------------- OAuth flow -------------------- */
+    /* -------------------- OAuth -------------------- */
 
     private void startSignIn() {
         if (!isConfigured()) {
@@ -170,8 +186,7 @@ public class MainActivity extends Activity {
                     OutputStream os = c.getOutputStream();
                     os.write(body.getBytes("UTF-8"));
                     os.close();
-                    String resp = readAll(c.getInputStream());
-                    JSONObject j = new JSONObject(resp);
+                    JSONObject j = new JSONObject(readAll(c.getInputStream()));
                     accessToken = j.optString("access_token", null);
                     idToken = j.optString("id_token", null);
                     if (accessToken == null) throw new Exception("no access token");
@@ -186,7 +201,7 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    /* -------------------- Drive API -------------------- */
+    /* -------------------- Drive -------------------- */
 
     private void driveBackup(final String json) {
         new Thread(new Runnable() {
@@ -242,8 +257,7 @@ public class MainActivity extends Activity {
                     HttpURLConnection c = (HttpURLConnection) new URL(
                             DRIVE_API + "/files/" + fileId + "?alt=media").openConnection();
                     c.setRequestProperty("Authorization", "Bearer " + accessToken);
-                    String data = readAll(c.getInputStream());
-                    callJs("window.onDriveRestoreResult", data);
+                    callJs("window.onDriveRestoreResult", readAll(c.getInputStream()));
                 } catch (Exception e) {
                     callJs("window.onDriveRestoreError", String.valueOf(e.getMessage()));
                 }
@@ -256,23 +270,110 @@ public class MainActivity extends Activity {
         HttpURLConnection c = (HttpURLConnection) new URL(
                 DRIVE_API + "/files?spaces=appDataFolder&fields=files(id,name)&q=" + q).openConnection();
         c.setRequestProperty("Authorization", "Bearer " + accessToken);
-        String resp = readAll(c.getInputStream());
-        JSONObject j = new JSONObject(resp);
+        JSONObject j = new JSONObject(readAll(c.getInputStream()));
         JSONArray files = j.optJSONArray("files");
-        if (files != null && files.length() > 0) {
-            return files.getJSONObject(0).optString("id", null);
-        }
+        if (files != null && files.length() > 0) return files.getJSONObject(0).optString("id", null);
         return null;
     }
 
-    /* -------------------- Helpers -------------------- */
+    /* -------------------- sharing / files / sms -------------------- */
+
+    private void openUrl(String url) {
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            toastMsg("कोई ऐप नहीं मिला");
+        }
+    }
+
+    private void sendSms(String phone, String body) {
+        try {
+            Intent i = new Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + phone));
+            i.putExtra("sms_body", body == null ? "" : body);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            toastMsg("SMS ऐप नहीं मिला");
+        }
+    }
+
+    private void shareText(String text) {
+        try {
+            Intent i = new Intent(Intent.ACTION_SEND);
+            i.setType("text/plain");
+            i.putExtra(Intent.EXTRA_TEXT, text == null ? "" : text);
+            startActivity(Intent.createChooser(i, "शेयर करें"));
+        } catch (Exception e) {
+            toastMsg("शेयर विफल");
+        }
+    }
+
+    private File writeShareFile(String name, String base64) throws Exception {
+        File dir = new File(getCacheDir(), "share");
+        if (!dir.exists()) dir.mkdirs();
+        File f = new File(dir, name);
+        byte[] data = Base64.decode(base64, Base64.DEFAULT);
+        FileOutputStream os = new FileOutputStream(f);
+        os.write(data);
+        os.close();
+        return f;
+    }
+
+    private void shareFile(String name, String base64, String mime, String text) {
+        try {
+            writeShareFile(name, base64);
+            Uri u = Uri.parse("content://" + ShareProvider.AUTHORITY + "/" + name);
+            Intent i = new Intent(Intent.ACTION_SEND);
+            i.setType(mime == null ? "application/octet-stream" : mime);
+            i.putExtra(Intent.EXTRA_STREAM, u);
+            if (text != null && text.length() > 0) i.putExtra(Intent.EXTRA_TEXT, text);
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(i, "शेयर करें"));
+        } catch (Exception e) {
+            toastMsg("शेयर विफल: " + e.getMessage());
+        }
+    }
+
+    private void saveFile(String name, String base64, String mime) {
+        try {
+            byte[] data = Base64.decode(base64, Base64.DEFAULT);
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentValues v = new ContentValues();
+                v.put(MediaStore.Downloads.DISPLAY_NAME, name);
+                v.put(MediaStore.Downloads.MIME_TYPE, mime == null ? "application/octet-stream" : mime);
+                Uri u = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                OutputStream os = getContentResolver().openOutputStream(u);
+                os.write(data);
+                os.close();
+                toastMsg("डाउनलोड फ़ोल्डर में सेव हो गया");
+            } else {
+                File dir = new File(getExternalFilesDir(null), "downloads");
+                if (!dir.exists()) dir.mkdirs();
+                File f = new File(dir, name);
+                FileOutputStream os = new FileOutputStream(f);
+                os.write(data);
+                os.close();
+                toastMsg("सेव हो गया: " + f.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            toastMsg("सेव विफल: " + e.getMessage());
+        }
+    }
+
+    /* -------------------- helpers -------------------- */
+
+    private void toastMsg(final String msg) {
+        runOnUiThread(new Runnable() {
+            public void run() { Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show(); }
+        });
+    }
 
     private void callJs(final String fn, final String arg) {
         final String js = fn + "(" + JSONObject.quote(arg) + ")";
         runOnUiThread(new Runnable() {
-            public void run() {
-                if (webView != null) webView.evaluateJavascript(js, null);
-            }
+            public void run() { if (webView != null) webView.evaluateJavascript(js, null); }
         });
     }
 
@@ -305,43 +406,52 @@ public class MainActivity extends Activity {
 
     private class Bridge {
         @JavascriptInterface
-        public boolean isConfigured() {
-            return MainActivity.this.isConfigured();
+        public boolean isConfigured() { return MainActivity.this.isConfigured(); }
+
+        @JavascriptInterface
+        public boolean hasDrive() { return true; }
+
+        @JavascriptInterface
+        public boolean hasShare() { return true; }
+
+        @JavascriptInterface
+        public void signIn() { runOnUiThread(new Runnable() { public void run() { startSignIn(); } }); }
+
+        @JavascriptInterface
+        public void signOut() { accessToken = null; idToken = null; }
+
+        @JavascriptInterface
+        public void driveBackup(final String json) { MainActivity.this.driveBackup(json); }
+
+        @JavascriptInterface
+        public void driveRestore() { MainActivity.this.driveRestore(); }
+
+        @JavascriptInterface
+        public void openUrl(final String url) {
+            runOnUiThread(new Runnable() { public void run() { MainActivity.this.openUrl(url); } });
         }
 
         @JavascriptInterface
-        public boolean hasDrive() {
-            return true;
+        public void sendSms(final String phone, final String body) {
+            runOnUiThread(new Runnable() { public void run() { MainActivity.this.sendSms(phone, body); } });
         }
 
         @JavascriptInterface
-        public void signIn() {
-            runOnUiThread(new Runnable() {
-                public void run() { startSignIn(); }
-            });
+        public void shareText(final String text) {
+            runOnUiThread(new Runnable() { public void run() { MainActivity.this.shareText(text); } });
         }
 
         @JavascriptInterface
-        public void signOut() {
-            accessToken = null;
-            idToken = null;
+        public void shareFile(final String name, final String base64, final String mime, final String text) {
+            runOnUiThread(new Runnable() { public void run() { MainActivity.this.shareFile(name, base64, mime, text); } });
         }
 
         @JavascriptInterface
-        public void driveBackup(final String json) {
-            MainActivity.this.driveBackup(json);
+        public void saveFile(final String name, final String base64, final String mime) {
+            new Thread(new Runnable() { public void run() { MainActivity.this.saveFile(name, base64, mime); } }).start();
         }
 
         @JavascriptInterface
-        public void driveRestore() {
-            MainActivity.this.driveRestore();
-        }
-
-        @JavascriptInterface
-        public void toast(final String msg) {
-            runOnUiThread(new Runnable() {
-                public void run() { Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show(); }
-            });
-        }
+        public void toast(final String msg) { toastMsg(msg); }
     }
 }

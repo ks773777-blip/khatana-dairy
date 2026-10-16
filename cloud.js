@@ -1,33 +1,41 @@
 /*
- * cloud.js — Google Sign-In + Google Drive backup + Firebase (optional)
+ * cloud.js — Google Sign-In + Google Drive backup (+ optional Firebase)
  * for Khatana Dairy Manager.
  *
- * Design:
- *  - In a browser / installed PWA it uses Firebase Authentication (Google)
- *    and keeps the Google OAuth access token for Drive.
- *  - Inside the Android APK it uses the native OAuth bridge exposed as
- *    window.AndroidBridge and reads the user's identity from the Google
- *    ID token, so Drive backup works even without Firebase.
- *  - If firebase-config.js still has placeholder keys, everything is
- *    disabled gracefully and the app stays fully offline.
+ * Sign-in paths, in order of preference:
+ *   1. Android APK  -> native OAuth bridge (window.AndroidBridge)
+ *   2. Browser/PWA  -> Google Identity Services (token client)
+ *   3. Firebase     -> Firebase Authentication (only if fully configured)
+ *
+ * Google Drive backup only needs a Google access token, so it works with
+ * path 1 or 2 and does NOT require Firebase.
+ *
+ * If nothing is configured the app stays fully offline and the cloud
+ * section just shows a "not set up" note.
  */
 (function () {
   'use strict';
 
   var CFG = window.FIREBASE_CONFIG || {};
+  var OAUTH = window.GOOGLE_OAUTH || window.ANDROID_OAUTH || {};
   var PLACEHOLDER = function (v) { return !v || String(v).indexOf('PASTE') !== -1 || String(v).indexOf('YOUR_') !== -1; };
-  var configured = !(PLACEHOLDER(CFG.apiKey) || PLACEHOLDER(CFG.projectId) || PLACEHOLDER(CFG.appId));
 
-  var state = { user: null, accessToken: null, firebaseReady: false };
+  var GOOGLE_CLIENT_ID = OAUTH.clientId || '';
+  var googleConfigured = !PLACEHOLDER(GOOGLE_CLIENT_ID);
+  var firebaseConfigured = !(PLACEHOLDER(CFG.apiKey) || PLACEHOLDER(CFG.projectId) || PLACEHOLDER(CFG.appId));
 
   var DRIVE_FILE = 'khatana-dairy-backup.json';
   var DRIVE = 'https://www.googleapis.com/drive/v3';
   var UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
+  var SCOPE = 'openid email profile https://www.googleapis.com/auth/drive.appdata';
+
+  var state = { user: null, accessToken: null, firebaseReady: false };
 
   function $(id) { return document.getElementById(id); }
   function app() { return window.DairyApp || {}; }
   function toast(m) { if (app().showToast) app().showToast(m, 4500); else console.log(m); }
   function status(t) { var s = $('cloud-status'); if (s) s.textContent = t || ''; }
+  function nativeOn() { return !!(window.AndroidBridge && window.AndroidBridge.isConfigured && window.AndroidBridge.isConfigured()); }
 
   function setBadge(text, off) {
     var b = $('cloud-badge'); if (!b) return;
@@ -38,7 +46,7 @@
   function updateUI() {
     var signedOut = $('cloud-signed-out'), signedIn = $('cloud-signed-in'), note = $('cloud-not-configured');
     if (!note) return;
-    if (!configured && !(window.AndroidBridge && window.AndroidBridge.isConfigured && window.AndroidBridge.isConfigured())) {
+    if (!googleConfigured && !firebaseConfigured && !nativeOn()) {
       note.style.display = '';
       if (signedOut) signedOut.style.display = 'none';
       if (signedIn) signedIn.style.display = 'none';
@@ -50,7 +58,7 @@
       if (signedOut) signedOut.style.display = 'none';
       if (signedIn) signedIn.style.display = '';
       var p = $('cloud-user-photo'), n = $('cloud-user-name'), e = $('cloud-user-email');
-      if (p) { if (state.user.photoURL) p.src = state.user.photoURL; else p.style.display = 'none'; }
+      if (p) { if (state.user.photoURL) { p.src = state.user.photoURL; p.style.display = ''; } else { p.style.display = 'none'; } }
       if (n) n.textContent = state.user.displayName || 'उपयोगकर्ता';
       if (e) e.textContent = state.user.email || '';
       setBadge('● साइन इन: ' + (state.user.email || ''), false);
@@ -61,76 +69,96 @@
     }
   }
 
-  /* ---------------- Firebase (browser) ---------------- */
+  /* ---------------- optional Firebase ---------------- */
   function initFirebase() {
-    if (!configured || typeof firebase === 'undefined') return;
+    if (!firebaseConfigured || typeof firebase === 'undefined') return;
     try {
       if (!firebase.apps.length) firebase.initializeApp(CFG);
       state.firebaseReady = true;
       firebase.auth().onAuthStateChanged(function (user) {
-        if (user) {
+        if (user && !state.user) {
           state.user = { displayName: user.displayName, email: user.email, photoURL: user.photoURL };
-        } else if (!(window.AndroidBridge && state.accessToken)) {
-          state.user = null; state.accessToken = null;
-        }
-        updateUI();
-      });
-      firebase.auth().getRedirectResult().then(function (res) {
-        if (res && res.credential && res.credential.accessToken) {
-          state.accessToken = res.credential.accessToken;
           updateUI();
         }
-      }).catch(function () {});
+      });
     } catch (e) { console.error('Firebase init error', e); }
   }
 
-  function googleProvider() {
-    var provider = new firebase.auth.GoogleAuthProvider();
-    provider.addScope('https://www.googleapis.com/auth/drive.appdata');
-    provider.addScope('https://www.googleapis.com/auth/drive.file');
-    provider.setCustomParameters({ prompt: 'select_account' });
-    return provider;
+  /* ---------------- Google Identity Services (browser) ---------------- */
+  function loadGis(cb) {
+    if (window.google && window.google.accounts && window.google.accounts.oauth2) return cb(null);
+    var s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.defer = true;
+    s.onload = function () { cb(null); };
+    s.onerror = function () { cb(new Error('load failed')); };
+    document.head.appendChild(s);
   }
 
-  /* ---------------- Sign in ---------------- */
-  function signIn() {
-    // 1) Native bridge (inside the APK)
-    if (window.AndroidBridge && window.AndroidBridge.signIn && window.AndroidBridge.isConfigured && window.AndroidBridge.isConfigured()) {
-      status('साइन इन हो रहा है…');
-      window.__signInDone = function (json) {
-        var res = typeof json === 'string' ? JSON.parse(json) : json;
-        nativeSignedIn(res);
-      };
-      window.__signInFail = function (msg) { status(''); toast('साइन इन विफल: ' + msg); };
-      try { window.AndroidBridge.signIn(); } catch (e) { status(''); toast('साइन इन उपलब्ध नहीं।'); }
-      return;
-    }
-    // 2) Firebase web flow
-    if (!state.firebaseReady) {
-      toast('क्लाउड सेट नहीं है। firebase-config.js में keys भरें।');
-      return;
-    }
+  function fetchUserInfo() {
+    fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + state.accessToken } })
+      .then(function (r) { return r.json(); })
+      .then(function (u) {
+        state.user = { displayName: u.name, email: u.email, photoURL: u.picture };
+        status('साइन इन सफल।'); updateUI();
+      })
+      .catch(function () { state.user = { displayName: 'उपयोगकर्ता', email: '' }; updateUI(); });
+  }
+
+  function gisSignIn() {
     status('साइन इन हो रहा है…');
-    firebase.auth().signInWithPopup(googleProvider()).then(function (res) {
-      if (res.credential && res.credential.accessToken) state.accessToken = res.credential.accessToken;
-      status('साइन इन सफल।');
-    }).catch(function (err) {
-      console.error('signin error', err);
-      if (err && (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment')) {
-        firebase.auth().signInWithRedirect(googleProvider()).catch(function () { status(''); toast('साइन इन विफल।'); });
-      } else {
-        status(''); toast('साइन इन विफल: ' + (err && err.message ? err.message : err));
+    loadGis(function (err) {
+      if (err || !window.google || !window.google.accounts) {
+        status(''); toast('Google साइन-इन लोड नहीं हुआ — इंटरनेट कनेक्शन ज़रूरी है।');
+        return;
       }
+      try {
+        var tc = google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: SCOPE,
+          prompt: 'select_account',
+          callback: function (resp) {
+            if (resp && resp.access_token) { state.accessToken = resp.access_token; fetchUserInfo(); }
+            else { status(''); toast('साइन इन पूरा नहीं हुआ।'); }
+          }
+        });
+        tc.requestAccessToken();
+      } catch (e) { status(''); toast('साइन इन विफल: ' + e.message); }
     });
   }
 
-  function decodeJwt(token) {
+  function firebaseSignIn() {
+    var provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/drive.appdata');
+    provider.setCustomParameters({ prompt: 'select_account' });
+    status('साइन इन हो रहा है…');
+    firebase.auth().signInWithPopup(provider).then(function (res) {
+      if (res.credential && res.credential.accessToken) state.accessToken = res.credential.accessToken;
+      status('साइन इन सफल।');
+    }).catch(function (err) {
+      console.error(err);
+      status(''); toast('साइन इन विफल: ' + (err && err.message ? err.message : err));
+    });
+  }
+
+  function signIn() {
+    if (nativeOn()) {
+      status('साइन इन हो रहा है…');
+      window.__signInDone = function (json) { nativeSignedIn(typeof json === 'string' ? JSON.parse(json) : json); };
+      window.__signInFail = function (m) { status(''); toast('साइन इन विफल: ' + m); };
+      try { window.AndroidBridge.signIn(); } catch (e) { status(''); toast('साइन इन उपलब्ध नहीं।'); }
+      return;
+    }
+    if (googleConfigured) return gisSignIn();
+    if (firebaseConfigured && state.firebaseReady) return firebaseSignIn();
+    toast('क्लाउड सेट नहीं है।');
+  }
+
+  function decodeJwt(t) {
     try {
-      var p = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      var json = decodeURIComponent(atob(p).split('').map(function (c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-      return JSON.parse(json);
+      var p = t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      var j = decodeURIComponent(atob(p).split('').map(function (c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
+      return JSON.parse(j);
     } catch (e) { return null; }
   }
 
@@ -138,47 +166,37 @@
     state.accessToken = res.accessToken || null;
     var info = res.idToken ? decodeJwt(res.idToken) : null;
     state.user = {
-      displayName: (info && info.name) || res.name || 'उपयोगकर्ता',
-      email: (info && info.email) || res.email || '',
-      photoURL: (info && info.picture) || res.picture || ''
+      displayName: (info && info.name) || 'उपयोगकर्ता',
+      email: (info && info.email) || '',
+      photoURL: (info && info.picture) || ''
     };
-    status('साइन इन सफल।');
-    updateUI();
-    // Best-effort: also sign in to Firebase so Firestore sync can be used.
-    if (state.firebaseReady && res.idToken) {
-      try {
-        var cred = firebase.auth.GoogleAuthProvider.credential(res.idToken, res.accessToken);
-        firebase.auth().signInWithCredential(cred).catch(function () {});
-      } catch (e) {}
-    }
+    status('साइन इन सफल।'); updateUI();
   }
   window.onAndroidSignInResult = function (json) { if (window.__signInDone) window.__signInDone(json); };
-  window.onAndroidSignInError = function (msg) { if (window.__signInFail) window.__signInFail(msg); };
-  window.onDriveBackupResult = function () { if (window.__driveBackupDone) window.__driveBackupDone(); };
-  window.onDriveBackupError = function (msg) { if (window.__driveBackupFail) window.__driveBackupFail(msg); };
-  window.onDriveRestoreResult = function (json) { if (window.__driveRestoreDone) window.__driveRestoreDone(json); };
-  window.onDriveRestoreError = function (msg) { if (window.__driveRestoreFail) window.__driveRestoreFail(msg); };
-
-  function nativeDrive() {
-    return window.AndroidBridge && window.AndroidBridge.hasDrive && window.AndroidBridge.hasDrive() && window.AndroidBridge.driveBackup;
-  }
+  window.onAndroidSignInError = function (m) { if (window.__signInFail) window.__signInFail(m); };
 
   function signOut() {
+    var t = state.accessToken;
     state.user = null; state.accessToken = null; updateUI(); status('साइन आउट हो गया।');
     if (window.AndroidBridge && window.AndroidBridge.signOut) { try { window.AndroidBridge.signOut(); } catch (e) {} }
+    if (t && window.google && window.google.accounts && window.google.accounts.oauth2) {
+      try { google.accounts.oauth2.revoke(t, function () {}); } catch (e) {}
+    }
     if (state.firebaseReady) { try { firebase.auth().signOut(); } catch (e) {} }
   }
 
   /* ---------------- Google Drive ---------------- */
+  function nativeDrive() {
+    return !!(window.AndroidBridge && window.AndroidBridge.hasDrive && window.AndroidBridge.hasDrive() && window.AndroidBridge.driveBackup);
+  }
   function authHeaders(extra) {
     var h = { 'Authorization': 'Bearer ' + state.accessToken };
     if (extra) { for (var k in extra) h[k] = extra[k]; }
     return h;
   }
-
   function driveList() {
     var q = encodeURIComponent("name='" + DRIVE_FILE + "' and trashed=false");
-    return fetch(DRIVE + '/files?spaces=appDataFolder&fields=files(id,name,modifiedTime,size)&q=' + q, { headers: authHeaders() })
+    return fetch(DRIVE + '/files?spaces=appDataFolder&fields=files(id,name,modifiedTime)&q=' + q, { headers: authHeaders() })
       .then(function (r) { if (!r.ok) throw new Error('Drive सूची विफल (' + r.status + ')'); return r.json(); });
   }
 
@@ -190,8 +208,7 @@
       window.__driveBackupDone = function () {
         var now = new Date().toISOString();
         try { localStorage.setItem('khatana_last_drive_backup', now); } catch (e) {}
-        status('बैकअप सफल: ' + new Date(now).toLocaleString());
-        toast('Google Drive में बैकअप सफल!');
+        status('बैकअप सफल: ' + new Date(now).toLocaleString()); toast('Google Drive में बैकअप सफल!');
       };
       window.__driveBackupFail = function (m) { status(''); toast('बैकअप विफल: ' + m); };
       try { window.AndroidBridge.driveBackup(JSON.stringify(app().buildBackupObject ? app().buildBackupObject() : {})); }
@@ -211,15 +228,14 @@
       var b = 'khatana' + Date.now();
       var multipart = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + meta +
         '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + body + '\r\n--' + b + '--';
-      return fetch(UPLOAD + '/files?uploadType=multipart&fields=id,modifiedTime', {
+      return fetch(UPLOAD + '/files?uploadType=multipart&fields=id', {
         method: 'POST', headers: authHeaders({ 'Content-Type': 'multipart/related; boundary=' + b }), body: multipart
       });
     }).then(function (r) {
       if (!r.ok) throw new Error('अपलोड विफल (' + r.status + ')');
       var now = new Date().toISOString();
       try { localStorage.setItem('khatana_last_drive_backup', now); } catch (e) {}
-      status('बैकअप सफल: ' + new Date(now).toLocaleString());
-      toast('Google Drive में बैकअप सफल!');
+      status('बैकअप सफल: ' + new Date(now).toLocaleString()); toast('Google Drive में बैकअप सफल!');
     }).catch(function (e) { console.error(e); status(''); toast('बैकअप विफल: ' + e.message); });
   }
 
@@ -250,16 +266,20 @@
     }).then(function (r) {
       if (!r.ok) throw new Error('डाउनलोड विफल (' + r.status + ')');
       return r.json();
-    }).then(function (data) {
-      return app().applyBackupObject(data);
-    }).then(function () {
-      status('पुनर्स्थापित सफल।');
-      toast('डेटा पुनर्स्थापित हो गया!');
-      if (app().renderDashboard) app().renderDashboard();
-    }).catch(function (e) { console.error(e); status(''); toast('पुनर्स्थापित विफल: ' + e.message); });
+    }).then(function (data) { return app().applyBackupObject(data); })
+      .then(function () {
+        status('पुनर्स्थापित सफल।'); toast('डेटा पुनर्स्थापित हो गया!');
+        if (app().renderDashboard) app().renderDashboard();
+      })
+      .catch(function (e) { console.error(e); status(''); toast('पुनर्स्थापित विफल: ' + e.message); });
   }
 
-  /* ---------------- Wiring ---------------- */
+  window.onDriveBackupResult = function () { if (window.__driveBackupDone) window.__driveBackupDone(); };
+  window.onDriveBackupError = function (m) { if (window.__driveBackupFail) window.__driveBackupFail(m); };
+  window.onDriveRestoreResult = function (j) { if (window.__driveRestoreDone) window.__driveRestoreDone(j); };
+  window.onDriveRestoreError = function (m) { if (window.__driveRestoreFail) window.__driveRestoreFail(m); };
+
+  /* ---------------- wiring ---------------- */
   function wire() {
     var b;
     if ((b = $('google-signin-btn'))) b.addEventListener('click', signIn);
@@ -270,16 +290,11 @@
 
   function registerSW() {
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-      window.addEventListener('load', function () {
-        navigator.serviceWorker.register('service-worker.js').catch(function () {});
-      });
+      window.addEventListener('load', function () { navigator.serviceWorker.register('service-worker.js').catch(function () {}); });
     }
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    wire();
-    initFirebase();
-    updateUI();
-    registerSW();
+    wire(); initFirebase(); updateUI(); registerSW();
   });
 })();
