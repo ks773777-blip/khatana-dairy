@@ -5,20 +5,24 @@
 #   JAVA_HOME        -> a JDK 17 install
 #   BUILD_TOOLS      -> Android build-tools dir (has aapt2, d8, apksigner, zipalign)
 #   ANDROID_JAR      -> path to the platform android.jar
+#   KS_PASS          -> keystore password (set your own; default is a placeholder)
 #
 # Output: build/app-release.apk
 set -euo pipefail
 ulimit -v unlimited 2>/dev/null || true
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
-JAVA_HOME="${JAVA_HOME:-/scratch/work/tool/jdk-17.0.20.1+1}"
-BUILD_TOOLS="${BUILD_TOOLS:-/scratch/work/android-sdk/android-14}"
-ANDROID_JAR="${ANDROID_JAR:-/scratch/work/android-sdk/android-34/android.jar}"
+JAVA_HOME="${JAVA_HOME:-/path/to/jdk-17}"
+BUILD_TOOLS="${BUILD_TOOLS:-/path/to/android-sdk/build-tools/34.0.0}"
+ANDROID_JAR="${ANDROID_JAR:-/path/to/android-sdk/platforms/android-34/android.jar}"
+
+# Optional: lower the JVM footprint on small build machines.
+if [ -n "${LOW_MEM:-}" ]; then
+  export _JAVA_OPTIONS="${_JAVA_OPTIONS:--Xmx512m -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=64m -XX:CompressedClassSpaceSize=64m -XX:+UseSerialGC -Xss512k}"
+fi
 
 export JAVA_HOME
 export PATH="$JAVA_HOME/bin:$PATH"
-# The build box has a tight virtual-memory cap; keep the JVM small.
-export _JAVA_OPTIONS="${_JAVA_OPTIONS:--Xmx512m -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=64m -XX:CompressedClassSpaceSize=64m -XX:+UseSerialGC -Xss512k}"
 
 AAPT2="$BUILD_TOOLS/aapt2"
 D8="$BUILD_TOOLS/d8"
@@ -63,18 +67,21 @@ cp "$OUT/base.apk" "$OUT/unsigned.apk"
 "$ZIPALIGN" -f -p 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
 
 echo ">> 6/6  signing"
+# Keystore password — set your own in the environment. This default is only
+# for a first local build; change it and keep the keystore safe.
+KS_PASS="${KS_PASS:-khatana123}"
 KS="$HERE/android/keystore/release.keystore"
 if [ ! -f "$KS" ]; then
   mkdir -p "$(dirname "$KS")"
   keytool -genkeypair -keystore "$KS" -alias khatana -keyalg RSA -keysize 2048 \
-    -validity 10000 -storepass khatana123 -keypass khatana123 \
+    -validity 10000 -storepass "$KS_PASS" -keypass "$KS_PASS" \
     -dname "CN=Khatana Dairy, O=Khatana, L=India, C=IN" >/dev/null 2>&1
 fi
-"$APKSIGNER" sign --ks "$KS" --ks-pass pass:khatana123 --key-pass pass:khatana123 \
+"$APKSIGNER" sign --ks "$KS" --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_PASS" \
   --out "$OUT/app-release.apk" "$OUT/aligned.apk"
 "$APKSIGNER" verify --print-certs "$OUT/app-release.apk" | head -4
 
 echo
 echo "APK: $OUT/app-release.apk"
 echo "Signing SHA-1 (register this in Google Cloud Console for Android OAuth):"
-keytool -list -v -keystore "$KS" -alias khatana -storepass khatana123 2>/dev/null | grep -i 'SHA1:' | head -1
+keytool -list -v -keystore "$KS" -alias khatana -storepass "$KS_PASS" 2>/dev/null | grep -i 'SHA1:' | head -1
