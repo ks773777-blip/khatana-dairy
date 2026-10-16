@@ -1,0 +1,11 @@
+# build outputs
+android/build/
+android/keystore/
+
+# JVM crash logs
+hs_err_pid*.log
+replay_pid*.log
+
+# OS junk
+.DS_Store
+Thumbs.db

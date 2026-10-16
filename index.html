@@ -1,0 +1,2603 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>डेयरी दूध प्रबंधक</title>
+    <meta name="theme-color" content="#4CAF50"/>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="डेयरी प्रबंधक">
+    <meta name="description" content="A complete PWA to manage daily milk sales, customers, and payments offline.">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z'/%3E%3Cpath d='M15.01 10.33c-.53 0-1.02.12-1.46.33-.44-.21-.93-.33-1.46-.33-1.66 0-3 1.34-3 3 0 .78.3 1.49.8 2.04.22.24.46.45.72.64.38.28.81.48 1.28.61V18h.11c.01 0 .02 0 .03 0h.01c.01 0 .02 0 .03 0h.11v-1.39c.47-.13.9-.34 1.28-.61.26-.19.5-.4.72-.64.5-.55.8-1.26.8-2.04 0-1.66-1.34-3-3-3zm0 4.19c-.19.14-.4.25-.62.33v-2.3c.22.08.43.19.62.33.5.37.88.9.88 1.48 0 .58-.38 1.11-.88 1.49zm-2.92 0c-.5-.38-.88-.91-.88-1.49 0-.58.38-1.11.88-1.48.19-.14.4-.25.62-.33v2.3c-.22-.08-.43-.19-.62-.33z'/%3E%3C/svg%3E">
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --primary-dark: #388E3C;
+            --accent-color: #FFC107;
+            --text-color: #212121;
+            --bg-color: #f5f5f5;
+            --surface-color: #ffffff;
+            --border-color: #e0e0e0;
+            --danger-color: #F44336;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0 0 70px 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .page {
+            display: none;
+            padding: 16px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .page.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header-back-btn {
+            position: absolute;
+            left: 16px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+        .card {
+            background: var(--surface-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+        }
+        .card-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #616161; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .form-group textarea {
+             resize: vertical;
+             min-height: 60px;
+        }
+        .btn {
+            display: inline-block;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-secondary { background-color: #e0e0e0; color: var(--text-color); }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+        .btn-whatsapp { background-color: #25D366; color: white; }
+        .btn-group { display: flex; gap: 10px; }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: var(--surface-color);
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+            color: #757575;
+            text-decoration: none;
+            font-size: 0.75rem;
+        }
+        .nav-item.active { color: var(--primary-color); }
+        .nav-item svg { width: 24px; height: 24px; margin-bottom: 4px; }
+        .fab {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background-color: var(--accent-color);
+            color: white;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 1001;
+        }
+        .fab-options {
+            position: fixed;
+            bottom: 145px;
+            right: 25px;
+            display: none;
+            flex-direction: column;
+            align-items: flex-end;
+            z-index: 1000;
+        }
+        .fab-option { display: flex; align-items: center; margin-bottom: 10px; }
+        .fab-option span { background: var(--surface-color); padding: 5px 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); margin-right: 10px; font-size: 0.9rem; }
+        .fab-option button { width: 40px; height: 40px; border-radius: 50%; border: none; color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+        .list { padding: 0; margin: 0; list-style: none; }
+        .list-item-wrapper { position: relative; overflow: hidden; touch-action: pan-y; }
+        .list-item-swipe-bg { position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: flex-end; background-color: var(--danger-color); color: white; padding: 0 20px; }
+        .list-item { 
+            background-color: var(--surface-color); 
+            padding: 16px; 
+            border-bottom: 1px solid var(--border-color); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            position: relative; 
+            transition: transform 0.3s ease, background-color 0.3s, opacity 0.3s; 
+            cursor: pointer; 
+        }
+        .list-item:first-child { border-top-left-radius: 12px; border-top-right-radius: 12px; }
+        .list-item:last-child { border-bottom: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+        .list-item-content strong { display: block; font-size: 1.1rem; }
+        .list-item-content span { font-size: 0.9rem; color: #757575; }
+        .list-item-due { font-weight: 600; }
+        .list-item-due.high-due { color: var(--danger-color); }
+        .text-center { text-align: center; }
+        .mt-1 { margin-top: 8px; }
+        .mt-2 { margin-top: 16px; }
+        .mb-0 { margin-bottom: 0; }
+        .d-none { display: none; }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .summary-item { background: #e8f5e9; padding: 16px; border-radius: 8px; text-align: center; }
+        .summary-item .value { font-size: 1.5rem; font-weight: 700; color: var(--primary-dark); }
+        .summary-item .label { font-size: 0.9rem; color: #616161; }
+        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; }
+        .modal-content { background: var(--surface-color); padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; }
+        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background-color: rgba(0,0,0,0.8); color: white; padding: 12px 20px; border-radius: 25px; z-index: 3000; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+        #toast.show { opacity: 1; visibility: visible; }
+        .report-list-header { font-weight: bold; font-size: 0.8rem; color: #616161; padding: 8px 16px; background: #fafafa; border-bottom: 1px solid var(--border-color); display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; text-align: right; }
+        .report-list-header span:first-child { text-align: left; }
+        .report-list-item { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; text-align: right; align-items: center; padding: 8px 16px; border-bottom: 1px dotted var(--border-color); }
+        .report-list-item:last-child { border-bottom: none; }
+        .report-list-item strong { text-align: left; }
+
+        .list-item-actions {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+        .list-item-actions button {
+            background: none;
+            border: none;
+            padding: 5px;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .list-item-actions .edit-btn { color: var(--primary-color); }
+        .list-item-actions .delete-btn { color: var(--danger-color); }
+        .list-item-actions .status-btn { color: #FFC107; }
+        .list-item-actions .edit-btn:hover { background-color: #e8f5e9; }
+        .list-item-actions .delete-btn:hover { background-color: #ffebee; }
+        .list-item-actions .status-btn:hover { background-color: #fff8e1; }
+        
+        .list-item.inactive-customer {
+            opacity: 0.6;
+            background-color: #fafafa;
+        }
+        .list-item.inactive-customer strong {
+            text-decoration: line-through;
+        }
+        
+        #report-detail-page .report-list-item {
+            grid-template-columns: 1.5fr 1fr 1fr 1fr 0.5fr;
+        }
+        #report-detail-page .report-list-header {
+            grid-template-columns: 1.5fr 1fr 1fr 1fr 0.5fr;
+        }
+        #report-detail-page .list-item-content {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+        .transaction-note {
+            font-size: 0.8em;
+            color: #757575;
+            font-style: italic;
+            margin-top: 2px;
+            white-space: normal;
+        }
+        .opening-balance-row {
+            padding: 10px 16px;
+            font-weight: bold;
+            background-color: #fffde7;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        /* New Styles for Enhanced UI */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .quick-action-btn {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .quick-action-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+        .quick-action-btn svg {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 5px;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .stats-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .stats-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .enhanced-card {
+            background: var(--surface-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .enhanced-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+        }
+        .customer-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-right: 15px;
+        }
+        .customer-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-radius: 12px;
+            background: var(--surface-color);
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+        .customer-card:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+        .customer-info {
+            flex-grow: 1;
+        }
+        .customer-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+        .customer-phone {
+            color: #757575;
+            font-size: 0.9rem;
+        }
+        .due-amount {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .high-due {
+            color: var(--danger-color);
+        }
+        .chart-container {
+            background: var(--surface-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            height: 200px;
+            position: relative;
+        }
+        .chart-bar {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            height: 150px;
+            padding: 10px;
+        }
+        .bar {
+            width: 30px;
+            background: var(--primary-color);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            transition: height 0.5s ease;
+        }
+        .bar-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            color: #757575;
+        }
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .month-selector {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .month-nav {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .current-month {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .enhanced-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .summary-card {
+            background: var(--surface-color);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .summary-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e8f5e9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            color: var(--primary-color);
+        }
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .summary-label {
+            font-size: 0.9rem;
+            color: #757575;
+        }
+
+        /* New Styles for Data Management */
+        .data-management-section {
+            margin-bottom: 20px;
+        }
+        .data-management-card {
+            background: var(--surface-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
+        }
+        .data-management-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .data-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .data-stat-item {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .data-stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+        .data-stat-label {
+            font-size: 0.8rem;
+            color: #616161;
+        }
+        .import-export-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .file-input-label {
+            display: block;
+            padding: 12px;
+            background: var(--primary-color);
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .file-input {
+            display: none;
+        }
+        .data-preview {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+        }
+        .data-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .bulk-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .bulk-action-btn {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .bulk-action-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+        .data-cleanup-options {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .cleanup-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .cleanup-info {
+            font-size: 0.8rem;
+            color: #616161;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 16px;
+        }
+        .tab {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            border-bottom: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        .data-table th, .data-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+    </style>
+<style id="cloud-styles">
+.btn-google { background:#fff; color:#3c4043; border:1px solid #dadce0; display:flex; align-items:center; justify-content:center; gap:10px; font-weight:600; }
+.btn-google svg { width:20px; height:20px; flex:0 0 20px; }
+.cloud-desc { font-size:0.85rem; color:#666; margin:0 0 12px; line-height:1.5; }
+.cloud-note { font-size:0.82rem; color:#8a6d00; background:#fff8e1; border:1px solid #ffe082; border-radius:8px; padding:10px 12px; line-height:1.55; }
+.cloud-note b { color:#5d4a00; }
+.cloud-user { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+.cloud-avatar { width:48px; height:48px; border-radius:50%; object-fit:cover; background:#eee; }
+.cloud-user-name { font-weight:600; }
+.cloud-user-email { font-size:0.8rem; color:#666; word-break:break-all; }
+.cloud-status { font-size:0.82rem; margin-top:10px; color:#555; min-height:1em; }
+.cloud-badge { display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--primary-dark); background:#e8f5e9; border-radius:999px; padding:3px 10px; margin-bottom:10px; }
+.cloud-badge.off { color:#757575; background:#eeeeee; }
+</style>
+</head>
+<body>
+
+    <div class="header" id="main-header">डेयरी दूध प्रबंधक</div>
+
+    <main>
+        <div id="dashboard-page" class="page active">
+            <div class="enhanced-card">
+                <div class="month-selector">
+                    <button class="month-nav" id="prev-month-btn">‹</button>
+                    <div class="current-month" id="current-month-display"></div>
+                    <button class="month-nav" id="next-month-btn">›</button>
+                </div>
+                <div class="enhanced-summary">
+                    <div class="summary-card">
+                        <div class="summary-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                                <path d="M0 0h24v24H0V0z" fill="none"/>
+                                <path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z"/>
+                            </svg>
+                        </div>
+                        <div class="summary-value" id="summary-milk">0 L</div>
+                        <div class="summary-label">कुल दूध</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                                <path d="M0 0h24v24H0V0z" fill="none"/>
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                        </div>
+                        <div class="summary-value" id="summary-revenue">₹0</div>
+                        <div class="summary-label">कुल बिक्री</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                                <path d="M0 0h24v24H0V0z" fill="none"/>
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                        </div>
+                        <div class="summary-value" id="summary-paid">₹0</div>
+                        <div class="summary-label">भुगतान</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                                <path d="M0 0h24v24H0V0z" fill="none"/>
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                        </div>
+                        <div class="summary-value" id="summary-due">₹0</div>
+                        <div class="summary-label">बकाया</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <div class="quick-action-btn" onclick="showPage('sell-page')">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                        <path d="M0 0h24v24H0V0z" fill="none"/>
+                        <path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h4v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/>
+                    </svg>
+                    <div>नई बिक्री</div>
+                </div>
+                <div class="quick-action-btn" onclick="showPage('payments-page')">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                        <path d="M0 0h24v24H0V0z" fill="none"/>
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    <div>भुगतान</div>
+                </div>
+                <div class="quick-action-btn" onclick="showPage('customers-page')">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                        <path d="M0 0h24v24H0z" fill="none"/>
+                        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                    <div>ग्राहक</div>
+                </div>
+                <div class="quick-action-btn" onclick="showPage('reports-page')">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                    </svg>
+                    <div>रिपोर्ट</div>
+                </div>
+            </div>
+
+            <div class="enhanced-card">
+                <div class="card-header">हाल के दैनिक बैच</div>
+                <div id="daily-batches-list"></div>
+            </div>
+
+            <div class="enhanced-card">
+                <div class="card-header">शीर्ष ग्राहक</div>
+                <div id="top-customers-list"></div>
+            </div>
+        </div>
+
+        <div id="sell-page" class="page">
+            <div class="enhanced-card">
+                <div class="card-header">नई बिक्री दर्ज करें</div>
+                <form id="sell-form">
+                    <input type="hidden" id="sale-id">
+                    <div class="form-group"><label for="sell-customer">ग्राहक</label><select id="sell-customer" required></select></div>
+                    
+                    <div class="form-group">
+                        <label for="sell-shift">समय</label>
+                        <select id="sell-shift" required>
+                            <option value="am">सुबह</option>
+                            <option value="pm">शाम</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group"><label for="sell-date">बैच दिनांक</label><input type="date" id="sell-date" required></div>
+                    <div class="btn-group">
+                        <div class="form-group" style="width: 100%;"><label for="sell-qty">मात्रा (ली.)</label><input type="number" id="sell-qty" step="0.01" required></div>
+                        <div class="form-group" style="width: 100%;"><label for="sell-rate">दर (₹/लीटर)</label><input type="number" id="sell-rate" step="0.01" required></div>
+                    </div>
+                    <div class="form-group"><label for="sell-notes">नोट्स (वैकल्पिक)</label><textarea id="sell-notes" placeholder="e.g. Extra milk"></textarea></div>
+                    <button type="submit" class="btn btn-primary">बिक्री सहेजें</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="customers-page" class="page">
+            <div class="enhanced-card mb-0">
+                <div class="card-header">सभी ग्राहक</div>
+                <input type="search" id="customer-search-input" class="search-input" placeholder="ग्राहक खोजें...">
+                <div id="customers-list"></div>
+            </div>
+            <div id="add-customer-modal" class="modal-backdrop">
+                <div class="modal-content">
+                    <h3 id="customer-modal-title">नया ग्राहक जोड़ें</h3>
+                    <form id="customer-form">
+                        <input type="hidden" id="customer-id">
+                        <div class="form-group"><label for="customer-name">नाम</label><input type="text" id="customer-name" required></div>
+                        <div class="form-group"><label for="customer-phone">फ़ोन (वैकल्पिक)</label><input type="tel" id="customer-phone"></div>
+                        
+                        <div class="btn-group">
+                            <div class="form-group" style="width: 100%;"><label for="default-qty-am">डिफ़ॉल्ट मात्रा (सुबह)</label><input type="number" id="default-qty-am" step="0.01" value="0.5" required></div>
+                            <div class="form-group" style="width: 100%;"><label for="default-qty-pm">डिफ़ॉल्ट मात्रा (शाम)</label><input type="number" id="default-qty-pm" step="0.01" value="0.5" required></div>
+                        </div>
+                        <div class="form-group"><label for="default-rate">डिफ़ॉल्ट दर (₹/ली.)</label><input type="number" id="default-rate" step="0.01" value="50" required></div>
+
+                        <div class="form-group">
+                            <label for="customer-status">स्थिति</label>
+                            <select id="customer-status">
+                                <option value="true">सक्रिय</option>
+                                <option value="false">निष्क्रिय</option>
+                            </select>
+                        </div>
+
+                        <div class="btn-group"><button type="button" class="btn btn-secondary" id="cancel-customer-btn">रद्द करें</button><button type="submit" class="btn btn-primary" id="save-customer-btn">सहेजें</button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div id="payments-page" class="page">
+            <div class="enhanced-card">
+                <div class="card-header">नया भुगतान दर्ज करें</div>
+                <form id="payment-form">
+                    <input type="hidden" id="payment-id">
+                    <div class="form-group">
+                        <label for="payment-customer">ग्राहक</label><select id="payment-customer" required></select>
+                        <div id="customer-due-display" class="mt-2" style="padding: 10px; background-color: #e8f5e9; border-radius: 8px; font-weight: 500; text-align: center;">बकाया राशि देखने के लिए ग्राहक चुनें।</div>
+                    </div>
+                    <div class="form-group"><label for="payment-amount">राशि (₹)</label><input type="number" id="payment-amount" step="0.01" required></div>
+                    <div class="form-group"><label for="payment-date">भुगतान दिनांक</label><input type="date" id="payment-date" required></div>
+                    <div class="form-group"><label for="payment-notes">नोट्स (वैकल्पिक)</label><textarea id="payment-notes" placeholder="e.g. Previous month due paid"></textarea></div>
+                    <button type="submit" class="btn btn-primary">भुगतान जोड़ें</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="reports-page" class="page">
+            <div class="enhanced-card">
+                <div class="card-header">ग्राहक-वार मासिक रिपोर्ट</div>
+                <div class="form-group"><label for="report-month">महीना चुनें</label><input type="month" id="report-month"></div>
+                <div id="report-summary-list"></div>
+                <div class="btn-group mt-2">
+                    <button class="btn btn-secondary" id="export-report-csv">CSV एक्सपोर्ट करें</button>
+                    <button class="btn btn-primary" id="download-all-invoices">सभी चालान (PDF)</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="report-detail-page" class="page"></div>
+
+        <div id="profile-page" class="page"></div>
+
+        <!-- New Data Management Page -->
+        <div id="data-management-page" class="page">
+            <div class="enhanced-card">
+                <div class="card-header">डेटा प्रबंधन</div>
+                
+                <div class="tabs">
+                    <div class="tab active" data-tab="overview">अवलोकन</div>
+                    <div class="tab" data-tab="import-export">आयात/निर्यात</div>
+                    <div class="tab" data-tab="cleanup">डेटा सफाई</div>
+                    <div class="tab" data-tab="bulk-actions">बल्क कार्य</div>
+                </div>
+
+                <div class="tab-content active" id="overview-tab">
+                    <div class="data-stats-grid">
+                        <div class="data-stat-item">
+                            <div class="data-stat-value" id="total-customers-count">0</div>
+                            <div class="data-stat-label">कुल ग्राहक</div>
+                        </div>
+                        <div class="data-stat-item">
+                            <div class="data-stat-value" id="total-sales-count">0</div>
+                            <div class="data-stat-label">कुल बिक्री</div>
+                        </div>
+                        <div class="data-stat-item">
+                            <div class="data-stat-value" id="total-payments-count">0</div>
+                            <div class="data-stat-label">कुल भुगतान</div>
+                        </div>
+                        <div class="data-stat-item">
+                            <div class="data-stat-value" id="db-size">0 KB</div>
+                            <div class="data-stat-label">डेटाबेस आकार</div>
+                        </div>
+                    </div>
+
+                    <div class="data-management-card">
+                        <div class="data-management-header">डेटा स्वास्थ्य</div>
+                        <div class="form-group">
+                            <label>अंतिम बैकअप:</label>
+                            <div id="last-backup-date">कभी नहीं</div>
+                        </div>
+                        <div class="form-group">
+                            <label>डेटा अखंडता:</label>
+                            <div id="data-integrity-status" style="color: var(--primary-color);">✓ सही</div>
+                        </div>
+                        <button class="btn btn-primary" id="check-data-integrity">डेटा जांचें</button>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="import-export-tab">
+                    <div class="bulk-actions">
+                        <div class="bulk-action-btn" onclick="exportAllData()">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                                <path d="M0 0h24v24H0V0z" fill="none"/>
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                            </svg>
+                            <div>सभी डेटा निर्यात करें</div>
+                        </div>
+                        <div class="bulk-action-btn" onclick="document.getElementById('import-file').click()">
+                            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                                <path d="M0 0h24v24H0V0z" fill="none"/>
+                                <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/>
+                            </svg>
+                            <div>डेटा आयात करें</div>
+                        </div>
+                    </div>
+
+                    <div class="data-management-card">
+                        <div class="data-management-header">चयनात्मक निर्यात</div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="export-customers" checked> ग्राहक</label>
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="export-sales" checked> बिक्री</label>
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="export-payments" checked> भुगतान</label>
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="export-settings" checked> सेटिंग्स</label>
+                        </div>
+                        <button class="btn btn-secondary" onclick="exportSelectedData()">चयनित डेटा निर्यात करें</button>
+                    </div>
+
+                    <input type="file" id="import-file" class="file-input" accept=".json,.csv">
+                    <div class="data-preview" id="import-preview" style="display: none;">
+                        <div id="import-preview-content"></div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="cleanup-tab">
+                    <div class="data-management-card">
+                        <div class="data-management-header">डेटा सफाई विकल्प</div>
+                        
+                        <div class="cleanup-option">
+                            <div>
+                                <strong>पुरानी बिक्री रिकॉर्ड्स</strong>
+                                <div class="cleanup-info">6 महीने से अधिक पुरानी बिक्री रिकॉर्ड्स हटाएं</div>
+                            </div>
+                            <button class="btn btn-danger" onclick="cleanupOldSales()">साफ करें</button>
+                        </div>
+
+                        <div class="cleanup-option">
+                            <div>
+                                <strong>पुराने भुगतान रिकॉर्ड्स</strong>
+                                <div class="cleanup-info">6 महीने से अधिक पुराने भुगतान रिकॉर्ड्स हटाएं</div>
+                            </div>
+                            <button class="btn btn-danger" onclick="cleanupOldPayments()">साफ करें</button>
+                        </div>
+
+                        <div class="cleanup-option">
+                            <div>
+                                <strong>निष्क्रिय ग्राहक</strong>
+                                <div class="cleanup-info">निष्क्रिय ग्राहक और उनके डेटा हटाएं</div>
+                            </div>
+                            <button class="btn btn-danger" onclick="cleanupInactiveCustomers()">साफ करें</button>
+                        </div>
+
+                        <div class="cleanup-option">
+                            <div>
+                                <strong>डुप्लीकेट एंट्रीज</strong>
+                                <div class="cleanup-info">डुप्लीकेट बिक्री और भुगतान रिकॉर्ड्स हटाएं</div>
+                            </div>
+                            <button class="btn btn-danger" onclick="removeDuplicateEntries()">साफ करें</button>
+                        </div>
+                    </div>
+
+                    <div class="data-management-card">
+                        <div class="data-management-header">डेटा ऑप्टिमाइज़ेशन</div>
+                        <button class="btn btn-primary" onclick="optimizeDatabase()">डेटाबेस ऑप्टिमाइज़ करें</button>
+                        <div class="cleanup-info mt-1">डेटाबेस प्रदर्शन में सुधार करने के लिए इंडेक्स को रीबिल्ड करता है</div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="bulk-actions-tab">
+                    <div class="data-management-card">
+                        <div class="data-management-header">बल्क अपडेट</div>
+                        
+                        <div class="form-group">
+                            <label for="bulk-rate-update">सभी ग्राहकों की दर अपडेट करें (₹/लीटर)</label>
+                            <input type="number" id="bulk-rate-update" step="0.01" placeholder="नई दर">
+                        </div>
+                        <button class="btn btn-primary" onclick="updateAllCustomerRates()">दरें अपडेट करें</button>
+
+                        <div class="form-group mt-2">
+                            <label for="bulk-quantity-update">सभी ग्राहकों की डिफॉल्ट मात्रा अपडेट करें (लीटर)</label>
+                            <div class="btn-group">
+                                <input type="number" id="bulk-qty-am" step="0.01" placeholder="सुबह की मात्रा">
+                                <input type="number" id="bulk-qty-pm" step="0.01" placeholder="शाम की मात्रा">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" onclick="updateAllCustomerQuantities()">मात्राएं अपडेट करें</button>
+                    </div>
+
+                    <div class="data-management-card">
+                        <div class="data-management-header">बल्क ऑपरेशन</div>
+                        
+                        <div class="bulk-actions">
+                            <div class="bulk-action-btn" onclick="generateAllInvoices()">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                                    <path d="M0 0h24v24H0V0z" fill="none"/>
+                                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                                </svg>
+                                <div>सभी चालान</div>
+                            </div>
+                            <div class="bulk-action-btn" onclick="sendBulkReminders()">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor">
+                                    <path d="M0 0h24v24H0V0z" fill="none"/>
+                                    <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z"/>
+                                </svg>
+                                <div>रिमाइंडर भेजें</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-page" class="page">
+            <div class="enhanced-card" id="account-card">
+                <div class="card-header">खाता और क्लाउड बैकअप</div>
+                <div id="cloud-badge" class="cloud-badge off">● ऑफ़लाइन मोड</div>
+                <div id="cloud-not-configured" class="cloud-note" style="display:none;">
+                    क्लाउड सुविधाएँ (Google लॉगिन + Drive बैकअप) अभी सेट नहीं हैं। <b>firebase-config.js</b> में अपनी Firebase keys भरें। बिना लॉगिन भी ऐप पूरी तरह काम करता है।
+                </div>
+                <div id="cloud-signed-out" style="display:none;">
+                    <p class="cloud-desc">Google से साइन इन करें — अपना डेटा सुरक्षित रखें और किसी भी फ़ोन पर वापस पाएँ।</p>
+                    <button id="google-signin-btn" class="btn btn-google">
+                        <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                        Google से साइन इन करें
+                    </button>
+                </div>
+                <div id="cloud-signed-in" style="display:none;">
+                    <div class="cloud-user">
+                        <img id="cloud-user-photo" class="cloud-avatar" alt="">
+                        <div>
+                            <div id="cloud-user-name" class="cloud-user-name"></div>
+                            <div id="cloud-user-email" class="cloud-user-email"></div>
+                        </div>
+                    </div>
+                    <div class="btn-group" style="flex-direction:column;">
+                        <button id="cloud-backup-btn" class="btn btn-primary">Google Drive में बैकअप लें</button>
+                        <button id="cloud-restore-btn" class="btn btn-secondary mt-1">Google Drive से पुनर्स्थापित करें</button>
+                        <button id="cloud-signout-btn" class="btn btn-secondary mt-1">साइन आउट</button>
+                    </div>
+                    <div id="cloud-status" class="cloud-status"></div>
+                </div>
+            </div>
+            <div class="enhanced-card">
+                <div class="card-header">भाषा सेटिंग्स</div>
+                <div class="form-group">
+                    <label for="app-language">भाषा चुनें</label>
+                    <select id="app-language">
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="en">English (अंग्रेजी)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="enhanced-card">
+                <div class="card-header">वरीयताएँ</div>
+                <div class="form-group"><label for="high-due-threshold">अधिक बकाया अलर्ट सीमा (₹)</label><input type="number" id="high-due-threshold" placeholder="e.g., 1000"></div>
+                <button id="save-settings-btn" class="btn btn-primary">सेटिंग्स सहेजें</button>
+            </div>
+            <div class="enhanced-card">
+                <div class="card-header">डेटा प्रबंधन</div>
+                <div class="btn-group" style="flex-direction: column;">
+                    <button id="backup-data-btn" class="btn btn-primary">डेटा का बैकअप (JSON)</button>
+                    <button id="restore-data-btn" class="btn btn-secondary mt-1">डेटा पुनर्स्थापित करें (JSON)</button>
+                    <button id="data-management-btn" class="btn btn-secondary mt-1" onclick="showPage('data-management-page')">उन्नत डेटा प्रबंधन</button>
+                    <input type="file" id="restore-file-input" class="d-none" accept=".json">
+                </div>
+            </div>
+            <div class="enhanced-card">
+                <div class="card-header">खतरा क्षेत्र</div>
+                <button id="clear-data-btn" class="btn btn-danger">सभी डेटा साफ करें</button>
+                <p class="mt-1" style="font-size: 0.8rem; color: #757575;">यह स्थायी रूप से सभी डेटा को हटा देगा।</p>
+            </div>
+        </div>
+    </main>
+    
+    <div id="toast"></div>
+
+    <div class="fab-options" id="fab-options">
+        <div class="fab-option"><span>नया भुगतान</span><button id="fab-payment-btn" style="background-color: var(--primary-color);"><svg xmlns="http://www.w3.org/2000/svg" fill="white" height="24" viewBox="0 96 960 960" width="24"><path d="M480 896q-142 0-241-99.5T140 556q0-68 31-129t84-108q53-47 124-75t146-28q69 0 134 26t117 73l-45 45q-42-37-92-57.5T480 381q-105 0-179 73t-74 177q0 103 73.5 176.5T480 881q105 0 178-74t73-179h-81v-60h140q0 9-1 18t-1 18q0 142-99.5 241T480 896Z"/></svg></button></div>
+        <div class="fab-option"><span>नई बिक्री</span><button id="fab-sell-btn" style="background-color: var(--primary-dark);"><svg xmlns="http://www.w3.org/2000/svg" fill="white" height="24px" viewBox="0 0 24 24" width="24px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h4v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg></button></div>
+        <div class="fab-option"><span>नया ग्राहक</span><button id="fab-customer-btn" style="background-color: var(--primary-dark);"><svg xmlns="http://www.w3.org/2000/svg" fill="white" height="24" viewBox="0 96 960 960" width="24"><path d="M480 575q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160 896v-94q0-38 19-65t49-41q71-30 148-45t154-15q77 0 154 15t148 45q30 14 49 41t19 65v94H160Zm80-80h480v-14q0-11-5.5-20T694 768q-60-26-126-39.5T440 716q-61 0-127 12.5T186 768q-9 5-14.5 14t-5.5 20v14Zm240-321q33 0 56.5-23.5T560 415q0-33-23.5-56.5T480 335q-33 0-56.5 23.5T400 415q0 33 23.5 56.5T480 495Zm0-80Zm0 401Z"/></svg></button></div>
+    </div>
+    <button class="fab" id="fab">+</button>
+
+    <nav class="bottom-nav">
+        <a href="#dashboard" class="nav-item active" data-page="dashboard-page"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>डैशबोर्ड</span></a>
+        <a href="#sell" class="nav-item" data-page="sell-page"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm6 16H6V8h2v2c0 .55.45 1 1 1s1-.45 1-1V8h4v2c0 .55.45 1 1 1s1-.45 1-1V8h2v12z"/></svg><span>बिक्री</span></a>
+        <a href="#customers" class="nav-item" data-page="customers-page"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor"><path d="M0 0h24v24H0z" fill="none"/><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg><span>ग्राहक</span></a>
+        <a href="#reports" class="nav-item" data-page="reports-page"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg><span>रिपोर्ट</span></a>
+        <a href="#data-management" class="nav-item" data-page="data-management-page"><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg><span>डेटा</span></a>
+        <a href="#settings" class="nav-item" data-page="settings-page"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49.42l.38-2.65c.61-.25 1.17-.59 1.69.98l2.49 1c.23.09.49 0 .61.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg><span>सेटिंग्स</span></a>
+    </nav>
+    
+<script>
+(function() {
+    'use strict';
+    
+    const DANGER_COLOR = '#F44336';
+    const PRIMARY_DARK = '#388E3C';
+
+    const appState = {
+        currentLang: 'hi',
+        currentCustomer: null,
+        highDueThreshold: 1000,
+        db: null,
+        customers: [],
+        sales: [],
+        payments: [],
+        currentMonth: new Date().toISOString().substring(0, 7),
+        lastBackupDate: null
+    };
+
+    function formatDate(isoDate) {
+        const date = new Date(isoDate);
+        return date.toLocaleDateString(appState.currentLang === 'hi' ? 'hi-IN' : 'en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function formatCurrency(amount) {
+        return '₹' + parseFloat(amount).toFixed(2);
+    }
+
+    function generateUniqueId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
+
+    function showToast(message, duration = 3000) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    function showPage(pageId, customerId = null) {
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+        
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        const navItem = document.querySelector(`.nav-item[data-page="${pageId}"]`);
+        if (navItem) navItem.classList.add('active');
+
+        document.getElementById('main-header').innerHTML = '';
+        document.getElementById('fab-options').style.display = 'none';
+
+        if (pageId === 'dashboard-page') renderDashboard();
+        else if (pageId === 'customers-page') renderCustomers();
+        else if (pageId === 'reports-page') renderReportsPage();
+        else if (pageId === 'profile-page') renderProfilePage(customerId);
+        else if (pageId === 'sell-page') prepareSellPage();
+        else if (pageId === 'payments-page') preparePaymentPage();
+        else if (pageId === 'settings-page') renderSettingsPage();
+        else if (pageId === 'data-management-page') renderDataManagementPage();
+    }
+
+    function initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('DairyDB', 2);
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('customers')) {
+                    db.createObjectStore('customers', { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains('sales')) {
+                    const saleStore = db.createObjectStore('sales', { keyPath: 'id' });
+                    saleStore.createIndex('customerId', 'customerId', { unique: false });
+                    saleStore.createIndex('date', 'date', { unique: false });
+                    saleStore.createIndex('customerDateShift', ['customerId', 'date', 'shift'], { unique: true });
+                }
+                if (!db.objectStoreNames.contains('payments')) {
+                    const paymentStore = db.createObjectStore('payments', { keyPath: 'id' });
+                    paymentStore.createIndex('customerId', 'customerId', { unique: false });
+                }
+                if (!db.objectStoreNames.contains('settings')) {
+                    db.createObjectStore('settings', { keyPath: 'key' });
+                }
+            };
+            request.onsuccess = (event) => { appState.db = event.target.result; resolve(); };
+            request.onerror = (event) => { console.error('IndexedDB error:', event.target.error); reject(event.target.error); };
+        });
+    }
+
+    function dbRequest(storeName, mode, method, data = null, index = null, range = null) {
+        return new Promise((resolve, reject) => {
+            if (!appState.db) return reject(new Error('DB not initialized'));
+            const transaction = appState.db.transaction(storeName, mode);
+            const store = transaction.objectStore(storeName);
+            let request;
+
+            if (method === 'get') request = store.get(data);
+            else if (method === 'put') request = store.put(data);
+            else if (method === 'delete') request = store.delete(data);
+            else if (method === 'getAll') {
+                const target = index ? store.index(index) : store;
+                request = range ? target.getAll(range) : target.getAll(data);
+            } else return reject(new Error('Invalid dbRequest parameters'));
+            
+            request.onsuccess = (event) => resolve(event.target.result);
+            request.onerror = (event) => reject(event.target.error);
+        });
+    }
+
+    async function loadAllData() {
+        try {
+            [appState.customers, appState.sales, appState.payments] = await Promise.all([
+                dbRequest('customers', 'readonly', 'getAll'),
+                dbRequest('sales', 'readonly', 'getAll'),
+                dbRequest('payments', 'readonly', 'getAll')
+            ]);
+            // Sort customers by name for consistent order
+            appState.customers.sort((a, b) => a.name.localeCompare(b.name));
+        } catch (error) {
+            console.error('Error loading all data:', error);
+            showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+        }
+    }
+
+    function calculateCustomerDue(customerId) {
+        const customerSales = appState.sales.filter(s => s.customerId === customerId);
+        const customerPayments = appState.payments.filter(p => p.customerId === customerId);
+        const totalSale = customerSales.reduce((sum, sale) => sum + (sale.quantity * sale.rate), 0);
+        const totalPaid = customerPayments.reduce((sum, payment) => sum + payment.amount, 0);
+        return parseFloat(totalSale - totalPaid);
+    }
+
+    function calculateDueUpTo(customerId, endDate) {
+        const salesBeforeDate = appState.sales.filter(s => s.customerId === customerId && s.date < endDate);
+        const paymentsBeforeDate = appState.payments.filter(p => p.customerId === customerId && p.date < endDate);
+        const totalSale = salesBeforeDate.reduce((sum, s) => sum + (s.quantity * s.rate), 0);
+        const totalPaid = paymentsBeforeDate.reduce((sum, p) => sum + p.amount, 0);
+        return parseFloat(totalSale - totalPaid);
+    }
+
+    function getMonthName(month) {
+        const date = new Date(month + '-01');
+        return date.toLocaleString(appState.currentLang === 'hi' ? 'hi-IN' : 'en-US', { month: 'long', year: 'numeric' });
+    }
+
+    async function renderDashboard(selectedMonth = null) {
+        if (!appState.customers.length) await loadAllData();
+        document.getElementById('main-header').textContent = 'डेयरी दूध प्रबंधक';
+
+        const now = new Date();
+        const currentMonth = now.toISOString().substring(0, 7);
+        const monthToDisplay = selectedMonth || appState.currentMonth || currentMonth;
+        appState.currentMonth = monthToDisplay;
+        
+        document.getElementById('current-month-display').textContent = getMonthName(monthToDisplay);
+
+        const startOfMonth = new Date(monthToDisplay + '-01').toISOString().split('T')[0];
+        const endOfMonth = new Date(new Date(startOfMonth).getFullYear(), new Date(startOfMonth).getMonth() + 1, 0).toISOString().split('T')[0];
+
+        const totalMilk = appState.sales.filter(s => s.date >= startOfMonth && s.date <= endOfMonth).reduce((sum, s) => sum + s.quantity, 0);
+        const totalSale = appState.sales.filter(s => s.date >= startOfMonth && s.date <= endOfMonth).reduce((sum, s) => sum + (s.quantity * s.rate), 0);
+        const totalPaid = appState.payments.filter(p => p.date >= startOfMonth && p.date <= endOfMonth).reduce((sum, p) => sum + p.amount, 0);
+        const totalDue = appState.customers.reduce((sum, c) => sum + calculateCustomerDue(c.id), 0);
+
+        document.getElementById('summary-milk').textContent = `${totalMilk.toFixed(2)} L`;
+        document.getElementById('summary-revenue').textContent = formatCurrency(totalSale);
+        document.getElementById('summary-paid').textContent = formatCurrency(totalPaid);
+        document.getElementById('summary-due').textContent = formatCurrency(totalDue);
+        
+        const dailyBatchesList = document.getElementById('daily-batches-list');
+        dailyBatchesList.innerHTML = '';
+
+        const dailyBatchData = appState.sales.reduce((acc, sale) => {
+            if (!acc[sale.date]) acc[sale.date] = { date: sale.date, milk: 0, revenue: 0 };
+            acc[sale.date].milk += parseFloat(sale.quantity);
+            acc[sale.date].revenue += parseFloat(sale.quantity * sale.rate);
+            return acc;
+        }, {});
+
+        const sortedDates = Object.keys(dailyBatchData).sort((a, b) => b.localeCompare(a)).slice(0, 10);
+
+        if (sortedDates.length === 0) {
+            dailyBatchesList.innerHTML = `<div class="text-center" style="padding: 20px; color: #757575;">इस महीने कोई बिक्री दर्ज नहीं हुई है।</div>`;
+        } else {
+            sortedDates.forEach(date => {
+                const batch = dailyBatchData[date];
+                const div = document.createElement('div');
+                div.className = 'customer-card';
+                div.setAttribute('onclick', `renderReportDetailPage(null, '${date.substring(0, 7)}')`);
+                div.innerHTML = `
+                    <div class="customer-avatar">${formatDate(date).split(' ')[0]}</div>
+                    <div class="customer-info">
+                        <div class="customer-name">${formatDate(date)}</div>
+                        <div class="customer-phone">${batch.milk.toFixed(2)} L, ${formatCurrency(batch.revenue)}</div>
+                    </div>`;
+                dailyBatchesList.appendChild(div);
+            });
+        }
+
+        // Render top customers
+        renderTopCustomers(monthToDisplay);
+    }
+
+    function renderTopCustomers(month) {
+        const topCustomersList = document.getElementById('top-customers-list');
+        topCustomersList.innerHTML = '';
+
+        const startOfMonth = new Date(month + '-01').toISOString().split('T')[0];
+        const endOfMonth = new Date(new Date(startOfMonth).getFullYear(), new Date(startOfMonth).getMonth() + 1, 0).toISOString().split('T')[0];
+
+        const customerStats = appState.customers.map(customer => {
+            const sales = appState.sales.filter(s => s.customerId === customer.id && s.date >= startOfMonth && s.date <= endOfMonth);
+            const milk = sales.reduce((sum, s) => sum + s.quantity, 0);
+            const revenue = sales.reduce((sum, s) => sum + (s.quantity * s.rate), 0);
+            return { customer, milk, revenue };
+        }).filter(stat => stat.milk > 0).sort((a, b) => b.milk - a.milk).slice(0, 5);
+
+        if (customerStats.length === 0) {
+            topCustomersList.innerHTML = `<div class="text-center" style="padding: 20px; color: #757575;">इस महीने कोई बिक्री दर्ज नहीं हुई है।</div>`;
+            return;
+        }
+
+        customerStats.forEach(stat => {
+            const div = document.createElement('div');
+            div.className = 'customer-card';
+            div.setAttribute('onclick', `showPage('profile-page', '${stat.customer.id}')`);
+            div.innerHTML = `
+                <div class="customer-avatar">${stat.customer.name.charAt(0).toUpperCase()}</div>
+                <div class="customer-info">
+                    <div class="customer-name">${stat.customer.name}</div>
+                    <div class="customer-phone">${stat.milk.toFixed(2)} L</div>
+                </div>
+                <div class="due-amount">${formatCurrency(stat.revenue)}</div>`;
+            topCustomersList.appendChild(div);
+        });
+    }
+
+    function prepareSellPage() {
+        const customerSelect = document.getElementById('sell-customer');
+        const dateInput = document.getElementById('sell-date');
+        const saleIdInput = document.getElementById('sale-id');
+        const notesInput = document.getElementById('sell-notes');
+
+        saleIdInput.value = '';
+        document.getElementById('main-header').textContent = 'नई बिक्री दर्ज करें';
+        customerSelect.disabled = false;
+        dateInput.value = new Date().toISOString().split('T')[0];
+        notesInput.value = '';
+        
+        customerSelect.innerHTML = `<option value="">ग्राहक चुनें</option>`;
+        // Only show active customers in the dropdown
+        appState.customers.filter(c => c.isActive).forEach(c => {
+            customerSelect.innerHTML += `<option value="${c.id}" data-qty-am="${c.defaultQtyAm}" data-qty-pm="${c.defaultQtyPm}" data-rate="${c.defaultRate}">${c.name}</option>`;
+        });
+    }
+
+    async function saveSale(event) {
+        event.preventDefault();
+        const form = event.target;
+        const customerId = form['sell-customer'].value;
+        const saleId = form['sale-id'].value;
+        if (!customerId) return showToast('कृपया एक ग्राहक चुनें।');
+
+        const sale = {
+            id: saleId || generateUniqueId(),
+            customerId,
+            date: form['sell-date'].value,
+            quantity: parseFloat(form['sell-qty'].value),
+            rate: parseFloat(form['sell-rate'].value),
+            shift: form['sell-shift'].value,
+            notes: form['sell-notes'].value.trim(),
+            type: 'sale',
+            timestamp: Date.now()
+        };
+
+        try {
+            if (!saleId) {
+                const existing = await dbRequest('sales', 'readonly', 'getAll', IDBKeyRange.only([customerId, sale.date, sale.shift]), 'customerDateShift');
+                if (existing && existing.length > 0) return showToast('इस ग्राहक की आज की एंट्री इस समय के लिए पहले ही हो चुकी है।');
+            }
+            await dbRequest('sales', 'readwrite', 'put', sale);
+            
+            if (saleId) { // If it was an EDIT
+                showToast('बिक्री सफलतापूर्वक अपडेट की गई!');
+                if (appState.currentCustomer) {
+                    showPage('profile-page', appState.currentCustomer.id);
+                }
+            } else { // If it was a NEW sale
+                await loadAllData();
+                showToast('बिक्री सफलतापूर्वक दर्ज की गई! अगला ग्राहक चुन लिया गया है।');
+                // Auto-select next customer
+                const customerSelect = form['sell-customer'];
+                const currentIndex = customerSelect.selectedIndex;
+                
+                if (currentIndex > 0 && currentIndex < customerSelect.options.length - 1) {
+                    // There is a next customer in the list
+                    customerSelect.selectedIndex = currentIndex + 1;
+                    customerSelect.dispatchEvent(new Event('change')); // Trigger change to update qty/rate
+                    form['sell-notes'].value = ''; // Clear notes for the next entry
+                    document.getElementById('sell-qty').focus(); // Focus on quantity for quick entry
+                } else {
+                    // Last customer, reset to "Select Customer"
+                    customerSelect.selectedIndex = 0;
+                    form['sell-qty'].value = '';
+                    form['sell-rate'].value = '';
+                    form['sell-notes'].value = '';
+                }
+            }
+        } catch (error) { 
+            console.error('Error saving sale:', error); 
+            if (error.name === 'ConstraintError') {
+                showToast('इस ग्राहक की आज की एंट्री इस समय के लिए पहले ही हो चुकी है।');
+            } else {
+                showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+            }
+        }
+    }
+    
+    function loadSaleForEdit(saleId) {
+        const sale = appState.sales.find(s => s.id === saleId);
+        if (!sale) return showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+        showPage('sell-page');
+        document.getElementById('main-header').textContent = 'बिक्री संपादित करें';
+        document.getElementById('sale-id').value = sale.id;
+        document.getElementById('sell-customer').value = sale.customerId;
+        document.getElementById('sell-customer').disabled = true;
+        document.getElementById('sell-date').value = sale.date;
+        document.getElementById('sell-shift').value = sale.shift;
+        document.getElementById('sell-qty').value = sale.quantity.toFixed(2);
+        document.getElementById('sell-rate').value = sale.rate.toFixed(2);
+        document.getElementById('sell-notes').value = sale.notes || '';
+    }
+    
+    async function deleteSale(saleId, redirectPageId = 'profile-page', redirectCustomerId = null) {
+        if (!confirm('क्या आप वाकई इस बिक्री एंट्री को हटाना चाहते हैं?')) return;
+        try {
+            await dbRequest('sales', 'readwrite', 'delete', saleId);
+            await loadAllData();
+            showToast('बिक्री एंट्री हटाई गई।');
+            if (redirectPageId === 'profile-page' && redirectCustomerId) renderProfilePage(redirectCustomerId);
+            else if (redirectPageId === 'report-detail-page') {
+                const month = document.getElementById('main-header').textContent.match(/\(([^)]+)\)/)?.[1];
+                if (month) renderReportDetailPage(appState.currentCustomer?.id, month);
+                else showPage('dashboard-page');
+            } else showPage('dashboard-page');
+        } catch (error) { console.error('Error deleting sale:', error); showToast('डेटा पुनर्स्थापित करने में त्रुटि।'); }
+    }
+
+    async function renderCustomers(filterText = '') {
+        await loadAllData();
+        document.getElementById('main-header').textContent = 'ग्राहक';
+        const customersList = document.getElementById('customers-list');
+        customersList.innerHTML = '';
+        
+        const filteredCustomers = appState.customers.filter(c => 
+            c.name.toLowerCase().includes(filterText.toLowerCase())
+        );
+
+        if (filteredCustomers.length === 0) {
+            customersList.innerHTML = `<div class="text-center" style="padding: 20px; color: #757575;">कोई ग्राहक नहीं मिला। + बटन का उपयोग करके एक जोड़ें।</div>`;
+            return;
+        }
+        
+        filteredCustomers.forEach(customer => {
+            const due = calculateCustomerDue(customer.id);
+            const div = document.createElement('div');
+            div.className = `customer-card ${!(customer.isActive === true) ? 'inactive-customer' : ''}`;
+            div.setAttribute('onclick', `showPage('profile-page', '${customer.id}')`);
+            
+            const statusIcon = customer.isActive 
+                ? `<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 0 24 24" width="20px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM9.29 16.29L5.7 12.7c-.39-.39-.39-1.02 0-1.41.39-.39 1.02-.39 1.41 0L10 14.17l6.88-6.88c.39-.39 1.02-.39 1.41 0 .39.39.39 1.02 0 1.41l-7.59 7.59c-.38.39-1.02.39-1.41 0z"/></svg>` // Check circle
+                : `<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 0 24 24" width="20px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13H7v-2h10v2z"/></svg>`; // Do not disturb / block icon
+                
+            div.innerHTML = `
+                <div class="customer-avatar">${customer.name.charAt(0).toUpperCase()}</div>
+                <div class="customer-info">
+                    <div class="customer-name">${customer.name}</div>
+                    <div class="customer-phone">${customer.phone || 'फ़ोन (वैकल्पिक)'}</div>
+                </div>
+                <div class="due-amount ${due > appState.highDueThreshold ? 'high-due' : ''}">${formatCurrency(due)}</div>
+                <div class="list-item-actions" onclick="event.stopPropagation()">
+                    <button class="status-btn" title="स्थिति बदलें" onclick="toggleCustomerStatus('${customer.id}')">${statusIcon}</button>
+                    <button class="edit-btn" title="संपादित करें" onclick="loadCustomerForEdit('${customer.id}')"><svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 0 24 24" width="20px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                    <button class="delete-btn" title="हटाएँ" onclick="confirmDeleteCustomer('${customer.id}')"><svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 0 24 24" width="20px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                </div>`;
+            customersList.appendChild(div);
+        });
+    }
+    
+    function loadCustomerForEdit(customerId) {
+        const customer = appState.customers.find(c => c.id === customerId);
+        if (!customer) return showToast('ग्राहक नहीं मिला!');
+        document.getElementById('customer-modal-title').textContent = 'ग्राहक संपादित करें';
+        document.getElementById('customer-id').value = customer.id;
+        document.getElementById('customer-name').value = customer.name;
+        document.getElementById('customer-phone').value = customer.phone || '';
+        document.getElementById('default-qty-am').value = customer.defaultQtyAm || 0.5;
+        document.getElementById('default-qty-pm').value = customer.defaultQtyPm || 0.5;
+        document.getElementById('default-rate').value = customer.defaultRate || 50;
+        document.getElementById('customer-status').value = customer.isActive === true;
+        document.getElementById('add-customer-modal').style.display = 'flex';
+    }
+
+    async function saveCustomer(event) {
+        event.preventDefault();
+        const form = event.target;
+        const customerId = form['customer-id'].value;
+        const customer = {
+            id: customerId || generateUniqueId(),
+            name: form['customer-name'].value.trim(),
+            phone: form['customer-phone'].value.trim(),
+            defaultQtyAm: parseFloat(form['default-qty-am'].value) || 0,
+            defaultQtyPm: parseFloat(form['default-qty-pm'].value) || 0,
+            defaultRate: parseFloat(form['default-rate'].value) || 0,
+            isActive: form['customer-status'].value === 'true' // Save status
+        };
+        try {
+            await dbRequest('customers', 'readwrite', 'put', customer);
+            document.getElementById('add-customer-modal').style.display = 'none';
+            form.reset();
+            showToast(customerId ? 'ग्राहक अपडेट किया गया!' : 'ग्राहक जोड़ा गया!');
+            renderCustomers();
+        } catch (error) { console.error('Error saving customer:', error); showToast('डेटा पुनर्स्थापित करने में त्रुटि।'); }
+    }
+
+    async function toggleCustomerStatus(customerId) {
+        const customer = appState.customers.find(c => c.id === customerId);
+        if (!customer) return showToast('ग्राहक नहीं मिला!');
+        
+        // Toggle status
+        customer.isActive = !(customer.isActive === true);
+
+        try {
+            await dbRequest('customers', 'readwrite', 'put', customer);
+            showToast('ग्राहक की स्थिति अपडेट हो गई है!');
+            renderCustomers(document.getElementById('customer-search-input').value); // Re-render with existing filter
+        } catch (error) {
+            console.error('Error updating customer status:', error);
+            showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+        }
+    }
+    
+    function confirmDeleteCustomer(customerId) {
+        const customer = appState.customers.find(c => c.id === customerId);
+        if (confirm('क्या आप वाकई हटाना चाहते हैं ' + customer.name + '?')) deleteCustomer(customerId);
+    }
+    
+    async function deleteCustomer(customerId) {
+        try {
+            await dbRequest('customers', 'readwrite', 'delete', customerId);
+            const salesToDelete = appState.sales.filter(s => s.customerId === customerId);
+            const paymentsToDelete = appState.payments.filter(p => p.customerId === customerId);
+            await Promise.all([
+                ...salesToDelete.map(s => dbRequest('sales', 'readwrite', 'delete', s.id)),
+                ...paymentsToDelete.map(p => dbRequest('payments', 'readwrite', 'delete', p.id))
+            ]);
+            await loadAllData();
+            showToast('ग्राहक और उनका डेटा हटा दिया गया।');
+            renderCustomers();
+        } catch (error) { console.error('Error deleting customer:', error); showToast('डेटा पुनर्स्थापित करने में त्रुटि।'); }
+    }
+
+    function preparePaymentPage() {
+        const customerSelect = document.getElementById('payment-customer');
+        const dateInput = document.getElementById('payment-date');
+        const notesInput = document.getElementById('payment-notes');
+
+        document.getElementById('payment-id').value = '';
+        document.getElementById('main-header').textContent = 'नया भुगतान दर्ज करें';
+        dateInput.value = new Date().toISOString().split('T')[0];
+        notesInput.value = '';
+
+        customerSelect.innerHTML = `<option value="">ग्राहक चुनें</option>`;
+        // Only show active customers in the dropdown
+        appState.customers.filter(c => c.isActive).forEach(c => {
+            customerSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+        });
+    }
+
+    async function savePayment(event) {
+        event.preventDefault();
+        const form = event.target;
+        const customerId = form['payment-customer'].value;
+        const paymentId = form['payment-id'].value;
+        if (!customerId) return showToast('कृपया एक ग्राहक चुनें।');
+
+        const payment = {
+            id: paymentId || generateUniqueId(),
+            customerId,
+            date: form['payment-date'].value,
+            amount: parseFloat(form['payment-amount'].value),
+            notes: form['payment-notes'].value.trim(),
+            type: 'payment',
+            timestamp: Date.now()
+        };
+
+        try {
+            await dbRequest('payments', 'readwrite', 'put', payment);
+            await loadAllData();
+            showToast(paymentId ? 'भुगतान सफलतापूर्वक अपडेट किया गया!' : 'भुगतान सफलतापूर्वक जोड़ा गया!');
+            if (paymentId && appState.currentCustomer) {
+                showPage('profile-page', appState.currentCustomer.id);
+            } else {
+                form.reset();
+                preparePaymentPage();
+            }
+        } catch (error) { console.error('Error saving payment:', error); showToast('डेटा पुनर्स्थापित करने में त्रुटि।'); }
+    }
+    
+    function loadPaymentForEdit(paymentId) {
+        const payment = appState.payments.find(p => p.id === paymentId);
+        if (!payment) return showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+        showPage('payments-page');
+        document.getElementById('main-header').textContent = 'भुगतान संपादित करें';
+        document.getElementById('payment-id').value = payment.id;
+        document.getElementById('payment-customer').value = payment.customerId;
+        document.getElementById('payment-date').value = payment.date;
+        document.getElementById('payment-amount').value = payment.amount.toFixed(2);
+        document.getElementById('payment-notes').value = payment.notes || '';
+        document.getElementById('payment-customer').onchange();
+    }
+
+    async function deletePayment(paymentId, redirectPageId = 'profile-page', redirectCustomerId = null) {
+        if (!confirm('क्या आप वाकई इस भुगतान एंट्री को हटाना चाहते हैं?')) return;
+        try {
+            await dbRequest('payments', 'readwrite', 'delete', paymentId);
+            await loadAllData();
+            showToast('भुगतान एंट्री हटाई गई।');
+            if (redirectPageId === 'profile-page' && redirectCustomerId) renderProfilePage(redirectCustomerId);
+            else if (redirectPageId === 'report-detail-page') {
+                const month = document.getElementById('main-header').textContent.match(/\(([^)]+)\)/)?.[1];
+                if (month) renderReportDetailPage(appState.currentCustomer?.id, month);
+                else showPage('dashboard-page');
+            } else showPage('dashboard-page');
+        } catch (error) { console.error('Error deleting payment:', error); showToast('डेटा पुनर्स्थापित करने में त्रुटि।'); }
+    }
+
+    async function renderReportsPage() {
+        await loadAllData();
+        document.getElementById('main-header').textContent = 'रिपोर्ट्स';
+        const defaultMonth = new Date().toISOString().substring(0, 7);
+        document.getElementById('report-month').value = defaultMonth;
+        renderMonthlyReport(defaultMonth);
+    }
+
+    function renderMonthlyReport(month) {
+        const reportSummaryList = document.getElementById('report-summary-list');
+        reportSummaryList.innerHTML = '';
+        const salesInMonth = appState.sales.filter(s => s.date.startsWith(month));
+        const paymentsInMonth = appState.payments.filter(p => p.date.startsWith(month));
+
+        const customerReport = appState.customers.map(c => {
+            const sales = salesInMonth.filter(s => s.customerId === c.id);
+            const payments = paymentsInMonth.filter(p => p.customerId === c.id);
+            if (sales.length === 0 && payments.length === 0) return null;
+            
+            const totalSale = sales.reduce((sum, s) => sum + (s.quantity * s.rate), 0);
+            const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+
+            return { id: c.id, name: c.name, totalSale, totalPaid, monthDue: totalSale - totalPaid };
+        }).filter(r => r !== null);
+        
+        const header = `<div class="report-list-header"><span>ग्राहक</span><span>बिक्री</span><span>भुगतान</span><span>बकाया</span></div>`;
+        reportSummaryList.innerHTML = header;
+
+        if (customerReport.length === 0) {
+            reportSummaryList.innerHTML += `<p class="text-center mt-2">इस महीने कोई गतिविधि नहीं मिली।</p>`;
+            return;
+        }
+
+        customerReport.forEach(report => {
+            const item = document.createElement('div');
+            item.className = 'report-list-item list-item-clickable';
+            item.setAttribute('onclick', `renderReportDetailPage('${report.id}', '${month}')`);
+            item.innerHTML = `<strong>${report.name}</strong><span>${formatCurrency(report.totalSale)}</span><span>${formatCurrency(report.totalPaid)}</span><span class="${report.monthDue > 0 ? 'high-due' : ''}">${formatCurrency(report.monthDue)}</span>`;
+            reportSummaryList.appendChild(item);
+        });
+    }
+
+    function renderReportDetailPage(customerId, month) {
+        showPage('report-detail-page');
+        const detailPage = document.getElementById('report-detail-page');
+        detailPage.innerHTML = '';
+        const reportCustomer = customerId ? appState.customers.find(c => c.id === customerId) : null;
+        document.getElementById('main-header').textContent = reportCustomer ? `${reportCustomer.name} का मासिक विवरण (${month})` : `मासिक विवरण (${month})`;
+
+        const transactions = [...appState.sales, ...appState.payments]
+            .filter(t => t.date.startsWith(month) && (!customerId || t.customerId === customerId))
+            .sort((a, b) => a.date.localeCompare(b.date) || a.timestamp - b.timestamp);
+
+        const transactionsList = document.createElement('div');
+        transactionsList.className = 'enhanced-card';
+        
+        const openingBalance = customerId ? calculateDueUpTo(customerId, month + '-01') : 0;
+        if (customerId) {
+            transactionsList.innerHTML += `<div class="opening-balance-row"><span>प्रारंभिक शेष:</span><span>${formatCurrency(openingBalance)}</span></div>`;
+        }
+
+        let headerHtml = `<div class="report-list-header"><span>दिनांक</span><span>मात्रा (ली.)</span><span>दर (₹/ली.)</span><span>राशि (₹)</span><span></span></div>`;
+        let listContent = '';
+        let totalSale = 0, totalPayment = 0;
+
+        transactions.forEach(t => {
+            const customer = appState.customers.find(c => c.id === t.customerId);
+            const isSale = t.type === 'sale';
+            const amount = isSale ? (t.quantity * t.rate) : t.amount;
+            isSale ? (totalSale += amount) : (totalPayment += amount);
+
+            listContent += `
+                <div class="report-list-item" style="${!isSale ? 'background-color: #f1f8e9;' : ''}">
+                    <div class="list-item-content">
+                        <strong>${formatDate(t.date)}</strong>
+                        <span style="font-size: 0.8em; color: ${isSale ? '#424242' : '#2e7d32'};">${!reportCustomer ? (customer.name + ' - ') : ''}${isSale ? 'बिक्री' + (t.shift === 'am' ? ` (सुबह)` : ` (शाम)`) : 'भुगतान प्राप्त'}</span>
+                        ${t.notes ? `<div class="transaction-note">${t.notes}</div>` : ''}
+                    </div>
+                    <span>${isSale ? t.quantity.toFixed(2) + ' L' : '-'}</span>
+                    <span>${isSale ? formatCurrency(t.rate) : '-'}</span>
+                    <span style="font-weight: 600; color: ${isSale ? DANGER_COLOR : PRIMARY_DARK};">${formatCurrency(amount)}</span>
+                    <div class="list-item-actions">
+                        <button class="edit-btn" onclick="${isSale ? `loadSaleForEdit('${t.id}')` : `loadPaymentForEdit('${t.id}')`}"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 0 24 24" width="18px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                        <button class="delete-btn" onclick="${isSale ? `deleteSale('${t.id}', 'report-detail-page')` : `deletePayment('${t.id}', 'report-detail-page')`}"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 0 24 24" width="18px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                    </div>
+                </div>`;
+        });
+        
+        transactionsList.innerHTML += headerHtml + listContent;
+        if (transactions.length === 0) transactionsList.innerHTML += `<p class="text-center mt-2">कोई लेन-देन नहीं मिला।</p>`;
+        
+        const monthDue = totalSale - totalPayment;
+        const totalDue = openingBalance + monthDue;
+        const summaryHtml = `
+            <div class="report-list-item" style="font-weight:bold; background: #fafafa;"><strong>कुल बिक्री (₹)</strong><span></span><span></span><span>${formatCurrency(totalSale)}</span><span></span></div>
+            <div class="report-list-item" style="font-weight:bold; background: #fafafa;"><strong>कुल भुगतान</strong><span></span><span></span><span>${formatCurrency(totalPayment)}</span><span></span></div>
+            <div class="report-list-item" style="font-weight:bold; background: #fafafa;"><strong>इस महीने का बकाया</strong><span></span><span></span><span class="${monthDue > 0 ? 'high-due' : ''}">${formatCurrency(monthDue)}</span><span></span></div>
+            ${customerId ? `<div class="report-list-item" style="font-weight:bold; font-size: 1.1em; background: #e8f5e9;"><strong>कुल बकाया:</strong><span></span><span></span><span class="${totalDue > appState.highDueThreshold ? 'high-due' : ''}">${formatCurrency(totalDue)}</span><span></span></div>` : ''}`;
+        
+        transactionsList.innerHTML += summaryHtml;
+        detailPage.appendChild(transactionsList);
+        
+        if (reportCustomer) {
+            const backBtn = document.createElement('button');
+            backBtn.className = 'btn btn-secondary mt-2';
+            backBtn.textContent = 'ग्राहक प्रोफाइल';
+            backBtn.onclick = () => showPage('profile-page', reportCustomer.id);
+            detailPage.appendChild(backBtn);
+        }
+    }
+
+    async function renderProfilePage(customerId) {
+        if (!customerId) return showPage('dashboard-page');
+        await loadAllData();
+        const customer = appState.customers.find(c => c.id === customerId);
+        if (!customer) return showToast('ग्राहक नहीं मिला!');
+        
+        appState.currentCustomer = customer;
+        document.getElementById('main-header').textContent = 'ग्राहक प्रोफाइल';
+        
+        const profilePage = document.getElementById('profile-page');
+        profilePage.innerHTML = '';
+        const due = calculateCustomerDue(customerId);
+
+        const now = new Date();
+        const currentMonth = now.toISOString().substring(0, 7);
+        const monthName = new Date(currentMonth + '-02').toLocaleString(appState.currentLang, { month: 'long', year: 'numeric' });
+
+        profilePage.innerHTML = `
+            <div class="enhanced-card">
+                <div class="customer-card mb-0">
+                    <div class="customer-avatar" style="width: 60px; height: 60px; font-size: 1.5rem;">${customer.name.charAt(0).toUpperCase()}</div>
+                    <div class="customer-info">
+                        <div class="customer-name" style="font-size: 1.3rem;">${customer.name}</div>
+                        <div class="customer-phone">${customer.phone || '-'}</div>
+                        <div style="margin-top: 8px;">
+                            <span style="font-weight: bold; color: ${customer.isActive ? 'var(--primary-dark)' : 'var(--danger-color)'}">${customer.isActive ? 'सक्रिय' : 'निष्क्रिय'}</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;">
+                    <div class="summary-card">
+                        <div class="summary-value">${customer.defaultQtyAm || 0} L</div>
+                        <div class="summary-label">डिफ़ॉल्ट मात्रा (सुबह)</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value">${customer.defaultQtyPm || 0} L</div>
+                        <div class="summary-label">डिफ़ॉल्ट मात्रा (शाम)</div>
+                    </div>
+                </div>
+                <div class="summary-card mt-2">
+                    <div class="summary-value">${formatCurrency(customer.defaultRate || 0)}/L</div>
+                    <div class="summary-label">डिफ़ॉल्ट दर</div>
+                </div>
+                <div class="stats-card mt-2">
+                    <div class="stats-value ${due > appState.highDueThreshold ? 'high-due' : ''}">${formatCurrency(due)}</div>
+                    <div class="stats-label">कुल बकाया:</div>
+                </div>
+                <div class="btn-group mt-2">
+                    <button class="btn btn-secondary" onclick="loadCustomerForEdit('${customer.id}')">संपादित करें</button>
+                    <button class="btn btn-primary" onclick="generateInvoicePDF('${customer.id}')">चालान PDF</button>
+                </div>
+                <div class="btn-group mt-1">
+                    <button class="btn btn-whatsapp" onclick="shareOnWhatsApp('${customer.id}', '${currentMonth}')">के लिए सारांश साझा करें ${monthName}</button>
+                </div>
+            </div>`;
+        
+        const transactions = [...appState.sales, ...appState.payments]
+            .filter(t => t.customerId === customerId).sort((a, b) => b.timestamp - a.timestamp).slice(0, 30);
+            
+        const historyCard = document.createElement('div');
+        historyCard.className = 'enhanced-card';
+        historyCard.innerHTML = `<div class="card-header">लेन-देन इतिहास</div>
+            <div class="report-list-header" style="grid-template-columns: 1.5fr 1fr 1fr 0.5fr;"><span>दिनांक</span><span>विवरण</span><span>राशि (₹)</span><span></span></div>`;
+
+        if (transactions.length === 0) {
+            historyCard.innerHTML += `<p class="text-center mt-2">कोई लेन-देन नहीं मिला।</p>`;
+        } else {
+            transactions.forEach(t => {
+                const isSale = t.type === 'sale';
+                const amount = isSale ? (t.quantity * t.rate) : t.amount;
+                historyCard.innerHTML += `
+                    <div class="report-list-item" style="grid-template-columns: 1.5fr 1fr 1fr 0.5fr; ${!isSale ? 'background-color: #f1f8e9;' : ''}">
+                        <div class="list-item-content"><strong>${formatDate(t.date)}</strong><span style="font-size: 0.8em; color: ${isSale ? '#424242' : '#2e7d32'};">${isSale ? 'बिक्री' + ` (${t.shift.substring(0,1)})` : 'भुगतान प्राप्त'}</span></div>
+                        <span style="font-size: 0.9em; color: #757575;">${isSale ? t.quantity + ' L' : ''}</span>
+                        <span style="font-weight: 600; color: ${isSale ? DANGER_COLOR : PRIMARY_DARK};">${formatCurrency(amount)}</span>
+                        <div class="list-item-actions">
+                            <button class="edit-btn" onclick="${isSale ? `loadSaleForEdit('${t.id}')` : `loadPaymentForEdit('${t.id}')`}"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 0 24 24" width="18px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                            <button class="delete-btn" onclick="${isSale ? `deleteSale('${t.id}', 'profile-page', '${customerId}')` : `deletePayment('${t.id}', 'profile-page', '${customerId}')`}"><svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 0 24 24" width="18px" fill="currentColor"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                        </div>
+                    </div>`;
+            });
+        }
+        profilePage.appendChild(historyCard);
+
+        const viewAllBtn = document.createElement('button');
+        viewAllBtn.className = 'btn btn-secondary mt-2';
+        viewAllBtn.textContent = `में लेन-देन ${monthName}`;
+        viewAllBtn.onclick = () => renderReportDetailPage(customerId, currentMonth);
+        profilePage.appendChild(viewAllBtn);
+    }
+    
+    async function renderSettingsPage() {
+         document.getElementById('main-header').textContent = 'सेटिंग्स';
+         const [langSetting, dueThreshold] = await Promise.all([
+            dbRequest('settings', 'readonly', 'get', 'language'),
+            dbRequest('settings', 'readonly', 'get', 'highDueThreshold')
+        ]);
+        document.getElementById('app-language').value = langSetting?.value || 'hi';
+        document.getElementById('high-due-threshold').value = dueThreshold?.value || 1000;
+    }
+
+    // New Data Management Functions
+    async function renderDataManagementPage() {
+        document.getElementById('main-header').textContent = 'डेटा प्रबंधन';
+        
+        // Update data statistics
+        document.getElementById('total-customers-count').textContent = appState.customers.length;
+        document.getElementById('total-sales-count').textContent = appState.sales.length;
+        document.getElementById('total-payments-count').textContent = appState.payments.length;
+        
+        // Calculate approximate database size
+        const dataSize = JSON.stringify(appState).length;
+        document.getElementById('db-size').textContent = Math.round(dataSize / 1024) + ' KB';
+        
+        // Update last backup date
+        if (appState.lastBackupDate) {
+            document.getElementById('last-backup-date').textContent = new Date(appState.lastBackupDate).toLocaleString();
+        }
+    }
+
+    function exportAllData() {
+        const data = {
+            customers: appState.customers,
+            sales: appState.sales,
+            payments: appState.payments,
+            settings: {
+                language: appState.currentLang,
+                highDueThreshold: appState.highDueThreshold
+            },
+            exportDate: new Date().toISOString(),
+            version: '1.0'
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `dairy_manager_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        appState.lastBackupDate = new Date().toISOString();
+        showToast('डेटा सफलतापूर्वक निर्यात किया गया!');
+    }
+
+    function exportSelectedData() {
+        const includeCustomers = document.getElementById('export-customers').checked;
+        const includeSales = document.getElementById('export-sales').checked;
+        const includePayments = document.getElementById('export-payments').checked;
+        const includeSettings = document.getElementById('export-settings').checked;
+        
+        const data = {
+            exportDate: new Date().toISOString(),
+            version: '1.0'
+        };
+        
+        if (includeCustomers) data.customers = appState.customers;
+        if (includeSales) data.sales = appState.sales;
+        if (includePayments) data.payments = appState.payments;
+        if (includeSettings) {
+            data.settings = {
+                language: appState.currentLang,
+                highDueThreshold: appState.highDueThreshold
+            };
+        }
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `dairy_manager_export_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showToast('डेटा सफलतापूर्वक निर्यात किया गया!');
+    }
+
+    async function cleanupOldSales() {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const cutoffDate = sixMonthsAgo.toISOString().split('T')[0];
+        
+        const oldSales = appState.sales.filter(sale => sale.date < cutoffDate);
+        
+        if (oldSales.length === 0) {
+            showToast('कोई लेन-देन नहीं मिला।');
+            return;
+        }
+        
+        if (confirm(`${oldSales.length} 6 महीने से अधिक पुरानी बिक्री रिकॉर्ड्स हटाएं?`)) {
+            try {
+                for (const sale of oldSales) {
+                    await dbRequest('sales', 'readwrite', 'delete', sale.id);
+                }
+                await loadAllData();
+                showToast('सफाई सफलतापूर्वक पूरी हुई!');
+                renderDataManagementPage();
+            } catch (error) {
+                console.error('Error cleaning up old sales:', error);
+                showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+            }
+        }
+    }
+
+    async function cleanupOldPayments() {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const cutoffDate = sixMonthsAgo.toISOString().split('T')[0];
+        
+        const oldPayments = appState.payments.filter(payment => payment.date < cutoffDate);
+        
+        if (oldPayments.length === 0) {
+            showToast('कोई लेन-देन नहीं मिला।');
+            return;
+        }
+        
+        if (confirm(`${oldPayments.length} 6 महीने से अधिक पुराने भुगतान रिकॉर्ड्स हटाएं?`)) {
+            try {
+                for (const payment of oldPayments) {
+                    await dbRequest('payments', 'readwrite', 'delete', payment.id);
+                }
+                await loadAllData();
+                showToast('सफाई सफलतापूर्वक पूरी हुई!');
+                renderDataManagementPage();
+            } catch (error) {
+                console.error('Error cleaning up old payments:', error);
+                showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+            }
+        }
+    }
+
+    async function cleanupInactiveCustomers() {
+        const inactiveCustomers = appState.customers.filter(customer => !customer.isActive);
+        
+        if (inactiveCustomers.length === 0) {
+            showToast('कोई ग्राहक नहीं मिला।');
+            return;
+        }
+        
+        if (confirm(`${inactiveCustomers.length} निष्क्रिय ग्राहक और उनका डेटा हटाएं?`)) {
+            try {
+                for (const customer of inactiveCustomers) {
+                    // Delete customer
+                    await dbRequest('customers', 'readwrite', 'delete', customer.id);
+                    
+                    // Delete customer's sales
+                    const customerSales = appState.sales.filter(s => s.customerId === customer.id);
+                    for (const sale of customerSales) {
+                        await dbRequest('sales', 'readwrite', 'delete', sale.id);
+                    }
+                    
+                    // Delete customer's payments
+                    const customerPayments = appState.payments.filter(p => p.customerId === customer.id);
+                    for (const payment of customerPayments) {
+                        await dbRequest('payments', 'readwrite', 'delete', payment.id);
+                    }
+                }
+                await loadAllData();
+                showToast('सफाई सफलतापूर्वक पूरी हुई!');
+                renderDataManagementPage();
+            } catch (error) {
+                console.error('Error cleaning up inactive customers:', error);
+                showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+            }
+        }
+    }
+
+    async function removeDuplicateEntries() {
+        // Find duplicate sales (same customer, date, shift)
+        const salesMap = new Map();
+        const duplicateSales = [];
+        
+        appState.sales.forEach(sale => {
+            const key = `${sale.customerId}-${sale.date}-${sale.shift}`;
+            if (salesMap.has(key)) {
+                duplicateSales.push(sale);
+            } else {
+                salesMap.set(key, sale);
+            }
+        });
+        
+        // Find duplicate payments (same customer, date, amount)
+        const paymentsMap = new Map();
+        const duplicatePayments = [];
+        
+        appState.payments.forEach(payment => {
+            const key = `${payment.customerId}-${payment.date}-${payment.amount}`;
+            if (paymentsMap.has(key)) {
+                duplicatePayments.push(payment);
+            } else {
+                paymentsMap.set(key, payment);
+            }
+        });
+        
+        const totalDuplicates = duplicateSales.length + duplicatePayments.length;
+        
+        if (totalDuplicates === 0) {
+            showToast('कोई लेन-देन नहीं मिला।');
+            return;
+        }
+        
+        if (confirm(`${totalDuplicates} डुप्लीकेट एंट्रीज हटाएं?`)) {
+            try {
+                for (const sale of duplicateSales) {
+                    await dbRequest('sales', 'readwrite', 'delete', sale.id);
+                }
+                for (const payment of duplicatePayments) {
+                    await dbRequest('payments', 'readwrite', 'delete', payment.id);
+                }
+                await loadAllData();
+                showToast('सफाई सफलतापूर्वक पूरी हुई!');
+                renderDataManagementPage();
+            } catch (error) {
+                console.error('Error removing duplicates:', error);
+                showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+            }
+        }
+    }
+
+    async function optimizeDatabase() {
+        try {
+            // Recreate the database to optimize storage
+            const dbName = 'DairyDB';
+            const dbVersion = 3; // Increment version to trigger upgrade
+            
+            // Close current database connection
+            if (appState.db) {
+                appState.db.close();
+            }
+            
+            // Reopen database which will trigger optimization
+            await initDB();
+            await loadAllData();
+            
+            showToast('ऑप्टिमाइज़ेशन सफलतापूर्वक पूरा हुआ!');
+            renderDataManagementPage();
+        } catch (error) {
+            console.error('Error optimizing database:', error);
+            showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+        }
+    }
+
+    async function updateAllCustomerRates() {
+        const newRate = parseFloat(document.getElementById('bulk-rate-update').value);
+        
+        if (isNaN(newRate) || newRate <= 0) {
+            showToast('अवैध सीमा मान।');
+            return;
+        }
+        
+        if (confirm(`सभी ${appState.customers.length} ग्राहकों की डिफ़ॉल्ट दर ₹${newRate} पर अपडेट करें?`)) {
+            try {
+                for (const customer of appState.customers) {
+                    customer.defaultRate = newRate;
+                    await dbRequest('customers', 'readwrite', 'put', customer);
+                }
+                await loadAllData();
+                showToast('बल्क अपडेट सफलतापूर्वक पूरा हुआ!');
+                renderDataManagementPage();
+            } catch (error) {
+                console.error('Error updating customer rates:', error);
+                showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+            }
+        }
+    }
+
+    async function updateAllCustomerQuantities() {
+        const newQtyAm = parseFloat(document.getElementById('bulk-qty-am').value);
+        const newQtyPm = parseFloat(document.getElementById('bulk-qty-pm').value);
+        
+        if (isNaN(newQtyAm) || isNaN(newQtyPm) || newQtyAm < 0 || newQtyPm < 0) {
+            showToast('अवैध सीमा मान।');
+            return;
+        }
+        
+        if (confirm(`सभी ${appState.customers.length} ग्राहकों की डिफ़ॉल्ट मात्राएं अपडेट करें?`)) {
+            try {
+                for (const customer of appState.customers) {
+                    customer.defaultQtyAm = newQtyAm;
+                    customer.defaultQtyPm = newQtyPm;
+                    await dbRequest('customers', 'readwrite', 'put', customer);
+                }
+                await loadAllData();
+                showToast('बल्क अपडेट सफलतापूर्वक पूरा हुआ!');
+                renderDataManagementPage();
+            } catch (error) {
+                console.error('Error updating customer quantities:', error);
+                showToast('डेटा पुनर्स्थापित करने में त्रुटि।');
+            }
+        }
+    }
+
+    function generateAllInvoices() {
+        const month = new Date().toISOString().substring(0, 7);
+        downloadAllInvoicesPDF(month);
+    }
+
+    function sendBulkReminders() {
+        const customersWithDue = appState.customers.filter(customer => {
+            const due = calculateCustomerDue(customer.id);
+            return due > 0 && customer.isActive;
+        });
+        
+        if (customersWithDue.length === 0) {
+            showToast('कोई ग्राहक नहीं मिला।');
+            return;
+        }
+        
+        let reminderText = `*Payment Reminder*\n\n`;
+        reminderText += `This is a friendly reminder for pending payments:\n\n`;
+        
+        customersWithDue.forEach(customer => {
+            const due = calculateCustomerDue(customer.id);
+            reminderText += `*${customer.name}:* ${formatCurrency(due)}\n`;
+        });
+        
+        reminderText += `\nPlease make your payment at your earliest convenience.\nThank you!`;
+        
+        const url = `https://wa.me/?text=${encodeURIComponent(reminderText)}`;
+        window.open(url, '_blank');
+    }
+
+    function checkDataIntegrity() {
+        let issues = [];
+        
+        // Check for customers without sales
+        const customersWithoutSales = appState.customers.filter(customer => {
+            return !appState.sales.some(sale => sale.customerId === customer.id);
+        });
+        
+        if (customersWithoutSales.length > 0) {
+            issues.push(`${customersWithoutSales.length} customers have no sales records`);
+        }
+        
+        // Check for sales without customers
+        const salesWithoutCustomers = appState.sales.filter(sale => {
+            return !appState.customers.some(customer => customer.id === sale.customerId);
+        });
+        
+        if (salesWithoutCustomers.length > 0) {
+            issues.push(`${salesWithoutCustomers.length} sales have no associated customer`);
+        }
+        
+        // Check for payments without customers
+        const paymentsWithoutCustomers = appState.payments.filter(payment => {
+            return !appState.customers.some(customer => customer.id === payment.customerId);
+        });
+        
+        if (paymentsWithoutCustomers.length > 0) {
+            issues.push(`${paymentsWithoutCustomers.length} payments have no associated customer`);
+        }
+        
+        const statusElement = document.getElementById('data-integrity-status');
+        
+        if (issues.length === 0) {
+            statusElement.textContent = '✓ डेटा अखंडता जांच पास हुई!';
+            statusElement.style.color = 'var(--primary-color)';
+            showToast('डेटा अखंडता जांच पास हुई!');
+        } else {
+            statusElement.textContent = '⚠ डेटा अखंडता जांच में समस्याएं मिलीं!';
+            statusElement.style.color = 'var(--danger-color)';
+            alert('Data integrity issues found:\n\n' + issues.join('\n'));
+        }
+    }
+
+    function generateInvoicePDF(customerId) {
+        const customer = appState.customers.find(c => c.id === customerId);
+        if (!customer) return;
+        const month = new Date().toISOString().substring(0, 7);
+        const transactions = [...appState.sales, ...appState.payments].filter(t => t.customerId === customerId && t.date.startsWith(month)).sort((a,b) => a.date.localeCompare(b.date));
+        
+        // Create a simple PDF using window.print()
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Invoice - ${customer.name}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .header { text-align: center; margin-bottom: 20px; }
+                        .customer-info { margin-bottom: 20px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        th { background-color: #f2f2f2; }
+                        .total { font-weight: bold; margin-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>Invoice</h1>
+                        <p>Month: ${getMonthName(month)}</p>
+                    </div>
+                    <div class="customer-info">
+                        <p><strong>Customer:</strong> ${customer.name}</p>
+                        <p><strong>Phone:</strong> ${customer.phone || '-'}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Quantity (L)</th>
+                                <th>Rate (₹/L)</th>
+                                <th>Amount (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${transactions.map(t => {
+                                const isSale = t.type === 'sale';
+                                return `
+                                    <tr>
+                                        <td>${formatDate(t.date)}</td>
+                                        <td>${isSale ? 'Sale' : 'Payment'}</td>
+                                        <td>${isSale ? t.quantity.toFixed(2) : '-'}</td>
+                                        <td>${isSale ? formatCurrency(t.rate) : '-'}</td>
+                                        <td>${formatCurrency(isSale ? t.quantity * t.rate : t.amount)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                    <div class="total">
+                        <p>Total Due: ${formatCurrency(calculateCustomerDue(customerId))}</p>
+                    </div>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+    
+    function shareOnWhatsApp(customerId, month) {
+        const customer = appState.customers.find(c => c.id === customerId);
+        if (!customer) return;
+
+        const sales = appState.sales.filter(s => s.customerId === customerId && s.date.startsWith(month));
+        const payments = appState.payments.filter(p => p.customerId === customerId && p.date.startsWith(month));
+
+        const totalMilk = sales.reduce((sum, s) => sum + s.quantity, 0);
+        const totalSale = sales.reduce((sum, s) => sum + (s.quantity * s.rate), 0);
+        const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+        const openingBalance = calculateDueUpTo(customerId, month + '-01');
+        const monthDue = totalSale - totalPaid;
+        const totalDue = openingBalance + monthDue;
+
+        const monthName = new Date(month + '-02').toLocaleString(appState.currentLang, { month: 'long', year: 'numeric' });
+
+        const summary = `*मासिक दूध सारांश - ${monthName}*\n\n` +
+            `*ग्राहक:* ${customer.name}\n\n` +
+            `*पिछला बकाया:* ${formatCurrency(openingBalance)}\n` +
+            `*कुल दूध:* ${totalMilk.toFixed(2)} L\n` +
+            `*कुल बिक्री (₹):* ${formatCurrency(totalSale)}\n` +
+            `*कुल भुगतान:* ${formatCurrency(totalPaid)}\n\n` +
+            `*कुल बकाया:* ${formatCurrency(totalDue)}\n\n` +
+            `_डेयरी दूध प्रबंधक_`;
+
+        const url = `https://wa.me/?text=${encodeURIComponent(summary)}`;
+        window.open(url, '_blank');
+    }
+
+    function setupEventListeners() {
+        document.querySelector('.bottom-nav').addEventListener('click', (e) => {
+            const navItem = e.target.closest('.nav-item');
+            if (navItem) { e.preventDefault(); showPage(navItem.getAttribute('data-page')); }
+        });
+
+        document.getElementById('fab').addEventListener('click', () => {
+            const options = document.getElementById('fab-options');
+            options.style.display = options.style.display === 'flex' ? 'none' : 'flex';
+        });
+
+        document.getElementById('fab-sell-btn').addEventListener('click', () => showPage('sell-page'));
+        document.getElementById('fab-payment-btn').addEventListener('click', () => showPage('payments-page'));
+        document.getElementById('fab-customer-btn').addEventListener('click', () => {
+             document.getElementById('customer-modal-title').textContent = 'नया ग्राहक जोड़ें';
+             document.getElementById('customer-form').reset();
+             document.getElementById('customer-id').value = '';
+             document.getElementById('customer-status').value = 'true'; // Default to active
+             document.getElementById('add-customer-modal').style.display = 'flex';
+             document.getElementById('fab-options').style.display = 'none';
+        });
+
+        document.getElementById('sell-form').addEventListener('submit', saveSale);
+        document.getElementById('customer-form').addEventListener('submit', saveCustomer);
+        document.getElementById('payment-form').addEventListener('submit', savePayment);
+        
+        document.getElementById('cancel-customer-btn').addEventListener('click', () => {
+            document.getElementById('add-customer-modal').style.display = 'none';
+        });
+
+        document.getElementById('save-settings-btn').addEventListener('click', async () => {
+            const lang = document.getElementById('app-language').value;
+            const threshold = parseFloat(document.getElementById('high-due-threshold').value);
+            if (isNaN(threshold) || threshold <= 0) return showToast('अवैध सीमा मान।');
+
+            try {
+                await Promise.all([
+                    dbRequest('settings', 'readwrite', 'put', { key: 'language', value: lang }),
+                    dbRequest('settings', 'readwrite', 'put', { key: 'highDueThreshold', value: threshold })
+                ]);
+                appState.currentLang = lang; document.documentElement.lang = lang;
+                appState.highDueThreshold = threshold;
+                showToast('सेटिंग्स सहेजी गईं।'); renderDashboard();
+            } catch (error) { console.error('Error saving settings:', error); showToast('डेटा पुनर्स्थापित करने में त्रुटि।'); }
+        });
+        
+        document.getElementById('backup-data-btn').addEventListener('click', async () => {
+            if (!confirm('क्या आप अपने सभी डेटा का बैकअप लेना चाहते हैं?')) return;
+            await loadAllData();
+            const data = { customers: appState.customers, sales: appState.sales, payments: appState.payments };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `dairy_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click(); URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('restore-data-btn').addEventListener('click', () => {
+            if (confirm('पुनर्स्थापित करने से वर्तमान डेटा अधिलेखित हो जाएगा। क्या आप सुनिश्चित हैं?')) document.getElementById('restore-file-input').click();
+        });
+        
+        document.getElementById('restore-file-input').addEventListener('change', (event) => {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data.customers || !data.sales || !data.payments) throw new Error('Invalid backup file.');
+                    
+                    // Add isActive field to old backups
+                    data.customers.forEach(c => {
+                        if (typeof c.isActive === 'undefined') {
+                            c.isActive = true;
+                        }
+                    });
+
+                    const tx = appState.db.transaction(['customers', 'sales', 'payments'], 'readwrite');
+                    await Promise.all(['customers','sales','payments'].map(s => new Promise((res, rej) => {
+                        const req = tx.objectStore(s).clear();
+                        req.onsuccess = res;
+                        req.onerror = rej;
+                    })));
+                    
+                    await Promise.all([
+                        ...data.customers.map(c => dbRequest('customers', 'readwrite', 'put', c)),
+                        ...data.sales.map(s => dbRequest('sales', 'readwrite', 'put', s)),
+                        ...data.payments.map(p => dbRequest('payments', 'readwrite', 'put', p)),
+                    ]);
+                    await loadAllData(); showToast('डेटा सफलतापूर्वक पुनर्स्थापित किया गया!'); showPage('dashboard-page');
+                } catch (error) { console.error('Restore error:', error); showToast('डेटा पुनर्स्थापित करने में त्रुटि।'); }
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('clear-data-btn').addEventListener('click', async () => {
+            if (prompt("यह सब कुछ हटा देगा। पुष्टि करने के लिए, 'DELETE' टाइप करें और OK पर क्लिक करें।") !== 'DELETE') return showToast('डेटा साफ करने का ऑपरेशन रद्द किया गया।');
+            try {
+                const tx = appState.db.transaction(['customers', 'sales', 'payments', 'settings'], 'readwrite');
+                await Promise.all(['customers','sales','payments','settings'].map(s => new Promise(res => tx.objectStore(s).clear().onsuccess = res)));
+                appState.customers = []; appState.sales = []; appState.payments = [];
+                showToast('सभी डेटा साफ कर दिया गया है।'); showPage('dashboard-page');
+            } catch (error) { console.error('Clear data error:', error); showToast('डेटा पुनर्स्थापित करने में त्रुटि।'); }
+        });
+        
+        document.getElementById('customer-search-input').addEventListener('keyup', (e) => {
+            renderCustomers(e.target.value);
+        });
+
+        document.getElementById('prev-month-btn').addEventListener('click', () => {
+            const current = new Date(appState.currentMonth + '-01');
+            current.setMonth(current.getMonth() - 1);
+            appState.currentMonth = current.toISOString().substring(0, 7);
+            renderDashboard(appState.currentMonth);
+        });
+
+        document.getElementById('next-month-btn').addEventListener('click', () => {
+            const current = new Date(appState.currentMonth + '-01');
+            current.setMonth(current.getMonth() + 1);
+            const now = new Date();
+            if (current <= now) {
+                appState.currentMonth = current.toISOString().substring(0, 7);
+                renderDashboard(appState.currentMonth);
+            }
+        });
+
+        document.getElementById('sell-customer').addEventListener('change', (e) => {
+            const selectedOption = e.target.options[e.target.selectedIndex];
+            if (!selectedOption.value) {
+                document.getElementById('sell-qty').value = '';
+                document.getElementById('sell-rate').value = '';
+                return;
+            };
+            const shift = document.getElementById('sell-shift').value;
+            const qty = shift === 'am' ? selectedOption.dataset.qtyAm : selectedOption.dataset.qtyPm;
+            document.getElementById('sell-qty').value = parseFloat(qty).toFixed(2);
+            document.getElementById('sell-rate').value = parseFloat(selectedOption.dataset.rate).toFixed(2);
+        });
+        
+        document.getElementById('sell-shift').addEventListener('change', (e) => {
+             const customerSelect = document.getElementById('sell-customer');
+             const selectedOption = customerSelect.options[customerSelect.selectedIndex];
+             if (!selectedOption.value) return;
+             const qty = e.target.value === 'am' ? selectedOption.dataset.qtyAm : selectedOption.dataset.qtyPm;
+             document.getElementById('sell-qty').value = parseFloat(qty).toFixed(2);
+        });
+        
+        document.getElementById('payment-customer').addEventListener('change', (e) => {
+            const customerId = e.target.value;
+            const dueDisplay = document.getElementById('customer-due-display');
+            const amountInput = document.getElementById('payment-amount');
+            if (customerId) {
+                const due = calculateCustomerDue(customerId);
+                dueDisplay.innerHTML = `कुल बकाया: <span class="${due > appState.highDueThreshold ? 'high-due' : ''}">${formatCurrency(due)}</span>`;
+                if (!document.getElementById('payment-id').value) {
+                    amountInput.value = Math.max(0, due).toFixed(2);
+                }
+            } else {
+                dueDisplay.textContent = 'बकाया राशि देखने के लिए ग्राहक चुनें।';
+                amountInput.value = '';
+            }
+        });
+
+        // Add tab switching for data management
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                
+                // Update active tab
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update active tab content
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
+        
+        // Add data integrity check
+        document.getElementById('check-data-integrity').addEventListener('click', checkDataIntegrity);
+    }
+
+    function buildBackupObject() {
+        return {
+            app: 'khatana-dairy',
+            version: '1.0',
+            exportDate: new Date().toISOString(),
+            customers: appState.customers,
+            sales: appState.sales,
+            payments: appState.payments,
+            settings: { language: appState.currentLang, highDueThreshold: appState.highDueThreshold }
+        };
+    }
+
+    async function applyBackupObject(data) {
+        if (!data || !Array.isArray(data.customers) || !Array.isArray(data.sales) || !Array.isArray(data.payments)) {
+            throw new Error('अमान्य बैकअप डेटा');
+        }
+        data.customers.forEach(c => { if (typeof c.isActive === 'undefined') c.isActive = true; });
+        const tx = appState.db.transaction(['customers', 'sales', 'payments'], 'readwrite');
+        await Promise.all(['customers', 'sales', 'payments'].map(s => new Promise((res, rej) => {
+            const req = tx.objectStore(s).clear();
+            req.onsuccess = res; req.onerror = rej;
+        })));
+        await Promise.all([
+            ...data.customers.map(c => dbRequest('customers', 'readwrite', 'put', c)),
+            ...data.sales.map(s => dbRequest('sales', 'readwrite', 'put', s)),
+            ...data.payments.map(p => dbRequest('payments', 'readwrite', 'put', p)),
+        ]);
+        await loadAllData();
+    }
+
+    // Initialize the application
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            await initDB();
+            
+            const [langSetting, dueThreshold] = await Promise.all([
+                dbRequest('settings', 'readonly', 'get', 'language'),
+                dbRequest('settings', 'readonly', 'get', 'highDueThreshold')
+            ]);
+            
+            appState.currentLang = langSetting?.value || 'hi';
+            document.documentElement.lang = appState.currentLang;
+            appState.highDueThreshold = dueThreshold?.value || 1000;
+            
+            // Set up global functions
+            window.renderReportDetailPage = renderReportDetailPage;
+            window.loadCustomerForEdit = loadCustomerForEdit; 
+            window.confirmDeleteCustomer = confirmDeleteCustomer; 
+            window.toggleCustomerStatus = toggleCustomerStatus;
+            window.loadSaleForEdit = loadSaleForEdit;
+            window.deleteSale = deleteSale;
+            window.loadPaymentForEdit = loadPaymentForEdit;
+            window.deletePayment = deletePayment;
+            window.generateInvoicePDF = generateInvoicePDF;
+            window.shareOnWhatsApp = shareOnWhatsApp;
+            window.showPage = showPage;
+            window.exportAllData = exportAllData;
+            window.cleanupOldSales = cleanupOldSales;
+            window.cleanupOldPayments = cleanupOldPayments;
+            window.cleanupInactiveCustomers = cleanupInactiveCustomers;
+            window.removeDuplicateEntries = removeDuplicateEntries;
+            window.optimizeDatabase = optimizeDatabase;
+            window.updateAllCustomerRates = updateAllCustomerRates;
+            window.updateAllCustomerQuantities = updateAllCustomerQuantities;
+            window.generateAllInvoices = generateAllInvoices;
+            window.sendBulkReminders = sendBulkReminders;
+            window.checkDataIntegrity = checkDataIntegrity;
+            window.exportSelectedData = exportSelectedData;
+
+            // Expose internals so cloud.js (Firebase / Google Drive) can use them.
+            window.DairyApp = {
+                get state() { return appState; },
+                dbRequest, loadAllData, showToast, showPage, renderDashboard,
+                buildBackupObject, applyBackupObject, formatCurrency, formatDate
+            };
+            setupEventListeners();
+            await loadAllData();
+            renderDashboard();
+
+            document.getElementById('report-month').addEventListener('change', (e) => renderMonthlyReport(e.target.value));
+            document.getElementById('export-report-csv').addEventListener('click', () => exportReportCSV());
+            document.getElementById('download-all-invoices').addEventListener('click', () => downloadAllInvoicesPDF());
+            
+        } catch (error) { 
+            console.error('Initialization error:', error); 
+        }
+    });
+    
+    function exportReportCSV() {
+        const month = document.getElementById('report-month').value;
+        const salesInMonth = appState.sales.filter(s => s.date.startsWith(month));
+        const paymentsInMonth = appState.payments.filter(p => p.date.startsWith(month));
+        
+        const customerReport = appState.customers.map(c => {
+            const sales = salesInMonth.filter(s => s.customerId === c.id);
+            const payments = paymentsInMonth.filter(p => p.customerId === c.id);
+            if (sales.length === 0 && payments.length === 0) return null;
+            
+            const totalSale = sales.reduce((sum, s) => sum + (s.quantity * s.rate), 0);
+            const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+            const due = totalSale - totalPaid;
+
+            return { name: c.name, totalSale, totalPaid, due };
+        }).filter(r => r !== null);
+
+        let csv = `ग्राहक,कुल बिक्री (₹),कुल भुगतान (₹),बकाया (₹)\n`;
+        customerReport.forEach(r => {
+            csv += `"${r.name}",${r.totalSale},${r.totalPaid},${r.due}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `report_${month}.csv`;
+        a.click(); URL.revokeObjectURL(url);
+        showToast('CSV रिपोर्ट एक्सपोर्ट की गई।');
+    }
+    
+    function downloadAllInvoicesPDF(month) {
+        month = month || document.getElementById('report-month').value;
+        if (!month) return showToast('कृपया महीना चुनें।');
+        
+        showToast('सभी चालान प्रिंट के लिए तैयार हैं। प्रत्येक ग्राहक के लिए अलग-अलग प्रिंट करें।');
+        
+        // Open print dialogs for each customer
+        const salesInMonth = appState.sales.filter(s => s.date.startsWith(month));
+        const paymentsInMonth = appState.payments.filter(p => p.date.startsWith(month));
+        const customerIds = [...new Set([...salesInMonth.map(s => s.customerId), ...paymentsInMonth.map(p => p.customerId)])];
+        
+        customerIds.forEach(customerId => {
+            const customer = appState.customers.find(c => c.id === customerId);
+            if (!customer) return;
+            generateInvoicePDF(customerId);
+        });
+    }
+})();
+</script>
+<script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-auth-compat.js"></script>
+<script src="vendor/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="cloud.js"></script>
+</body>
+</html>
