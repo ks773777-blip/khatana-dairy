@@ -4,7 +4,7 @@
 
 A dairy/milk sales manager for small vendors: customers, daily sales, payments, dues, reports and invoices. Works fully offline, installs as an Android app (APK) or a PWA, and can back up to Google Drive after a Google sign-in.
 
-**Current release: v1.1** — `dist/khatana-dairy-v1.1.apk`
+**Current release: v1.2** — `dist/khatana-dairy-v1.2.apk`
 
 ---
 
@@ -43,7 +43,7 @@ A dairy/milk sales manager for small vendors: customers, daily sales, payments, 
 
 ## 🚀 तुरंत इस्तेमाल करें
 
-**APK:** `dist/khatana-dairy-v1.1.apk` डाउनलोड करें → फ़ोन में खोलें → "अज्ञात स्रोत से इंस्टॉल" की अनुमति दें। ऐप पूरी तरह ऑफ़लाइन काम करता है।
+**APK:** `dist/khatana-dairy-v1.2.apk` डाउनलोड करें → फ़ोन में खोलें → "अज्ञात स्रोत से इंस्टॉल" की अनुमति दें। ऐप पूरी तरह ऑफ़लाइन काम करता है।
 
 **वेब/PWA:** रिपॉज़िटरी को GitHub Pages पर ऑन करें (Settings → Pages → Branch: `main` → `/ (root)`)। लाइव लिंक: `https://<username>.github.io/khatana-dairy/`
 
@@ -51,7 +51,9 @@ A dairy/milk sales manager for small vendors: customers, daily sales, payments, 
 
 ## ☁️ Google लॉगिन सेटअप
 
-ऐप में पहले से आपका client id भरा है। पूरा काम करने के लिए Google Cloud Console में **दो** OAuth clients बनाएँ (एक ही प्रोजेक्ट में):
+ऐप में पहले से आपकी **दोनों** client ids भरी हैं — ऐप उन्हें एक-एक करके आज़माता है और अपने-आप दूसरी पर चला जाता है, इसलिए यह मायने नहीं रखता कि कौन-सी "Android" client है और कौन-सी "Web" client।
+
+पूरा काम करने के लिए Google Cloud Console में **दो** OAuth clients बनाएँ (एक ही प्रोजेक्ट में):
 
 **1) Android client (APK के लिए)**
 - Type: **Android**

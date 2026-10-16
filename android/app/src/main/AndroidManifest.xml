@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.khatana.dairymanager"
-    android:versionCode="2"
-    android:versionName="1.1">
+    android:versionCode="3"
+    android:versionName="1.2">
 
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -27,13 +27,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Google OAuth redirect back into the app (reverse client-id scheme). -->
+            <!-- Google OAuth redirects back into the app (reverse client-id schemes). -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="com.googleusercontent.apps.825594104011-h02pqq57t6iasr2h2qgnqceu1tbbp7oe"
+                    android:path="/oauth2redirect" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="com.googleusercontent.apps.825594104011-kp07lei9uc7qu2rrgm8hdu5hvspad9b7"
                     android:path="/oauth2redirect" />
             </intent-filter>
 

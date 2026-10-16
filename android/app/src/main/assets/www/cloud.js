@@ -7,22 +7,24 @@
  *   2. Browser/PWA  -> Google Identity Services (token client)
  *   3. Firebase     -> Firebase Authentication (only if fully configured)
  *
- * Google Drive backup only needs a Google access token, so it works with
- * path 1 or 2 and does NOT require Firebase.
+ * Multiple OAuth client ids can be configured; they are tried in order and
+ * the app falls back to the next one automatically, so it does not matter
+ * which id is the "Android" client and which is the "Web application" client.
  *
- * If nothing is configured the app stays fully offline and the cloud
- * section just shows a "not set up" note.
+ * Google Drive backup only needs a Google access token, so it works without
+ * Firebase.
  */
 (function () {
   'use strict';
 
   var CFG = window.FIREBASE_CONFIG || {};
-  var OAUTH = window.GOOGLE_OAUTH || window.ANDROID_OAUTH || {};
+  var OAUTH = window.GOOGLE_OAUTH || {};
   var PLACEHOLDER = function (v) { return !v || String(v).indexOf('PASTE') !== -1 || String(v).indexOf('YOUR_') !== -1; };
 
-  var GOOGLE_CLIENT_ID = OAUTH.clientId || '';
-  var googleConfigured = !PLACEHOLDER(GOOGLE_CLIENT_ID);
+  var CLIENT_IDS = (OAUTH.clientIds && OAUTH.clientIds.length ? OAUTH.clientIds : [OAUTH.clientId])
+    .filter(function (c) { return c && !PLACEHOLDER(c); });
   var firebaseConfigured = !(PLACEHOLDER(CFG.apiKey) || PLACEHOLDER(CFG.projectId) || PLACEHOLDER(CFG.appId));
+  var idx = 0;
 
   var DRIVE_FILE = 'khatana-dairy-backup.json';
   var DRIVE = 'https://www.googleapis.com/drive/v3';
@@ -36,6 +38,9 @@
   function toast(m) { if (app().showToast) app().showToast(m, 4500); else console.log(m); }
   function status(t) { var s = $('cloud-status'); if (s) s.textContent = t || ''; }
   function nativeOn() { return !!(window.AndroidBridge && window.AndroidBridge.isConfigured && window.AndroidBridge.isConfigured()); }
+  function currentClient() { return CLIENT_IDS[idx % Math.max(CLIENT_IDS.length, 1)]; }
+  function advance() { if (CLIENT_IDS.length > 1) idx = (idx + 1) % CLIENT_IDS.length; }
+  function lockClient(cid) { var i = CLIENT_IDS.indexOf(cid); if (i >= 0) idx = i; }
 
   function setBadge(text, off) {
     var b = $('cloud-badge'); if (!b) return;
@@ -46,7 +51,7 @@
   function updateUI() {
     var signedOut = $('cloud-signed-out'), signedIn = $('cloud-signed-in'), note = $('cloud-not-configured');
     if (!note) return;
-    if (!googleConfigured && !firebaseConfigured && !nativeOn()) {
+    if (!CLIENT_IDS.length && !firebaseConfigured && !nativeOn()) {
       note.style.display = '';
       if (signedOut) signedOut.style.display = 'none';
       if (signedIn) signedIn.style.display = 'none';
@@ -105,7 +110,7 @@
       .catch(function () { state.user = { displayName: 'उपयोगकर्ता', email: '' }; updateUI(); });
   }
 
-  function gisSignIn() {
+  function gisSignIn(cid) {
     status('साइन इन हो रहा है…');
     loadGis(function (err) {
       if (err || !window.google || !window.google.accounts) {
@@ -114,16 +119,20 @@
       }
       try {
         var tc = google.accounts.oauth2.initTokenClient({
-          client_id: GOOGLE_CLIENT_ID,
+          client_id: cid,
           scope: SCOPE,
           prompt: 'select_account',
           callback: function (resp) {
-            if (resp && resp.access_token) { state.accessToken = resp.access_token; fetchUserInfo(); }
-            else { status(''); toast('साइन इन पूरा नहीं हुआ।'); }
+            if (resp && resp.access_token) { lockClient(cid); state.accessToken = resp.access_token; fetchUserInfo(); }
+            else { status(''); advance(); toast('साइन इन पूरा नहीं हुआ — दोबारा "साइन इन" दबाएँ।'); }
+          },
+          error_callback: function (e) {
+            status(''); advance();
+            toast('साइन इन विफल (' + ((e && e.type) || 'error') + ') — दोबारा "साइन इन" दबाएँ।');
           }
         });
         tc.requestAccessToken();
-      } catch (e) { status(''); toast('साइन इन विफल: ' + e.message); }
+      } catch (e) { status(''); advance(); toast('साइन इन विफल: ' + e.message); }
     });
   }
 
@@ -142,14 +151,15 @@
   }
 
   function signIn() {
+    var cid = currentClient();
     if (nativeOn()) {
       status('साइन इन हो रहा है…');
-      window.__signInDone = function (json) { nativeSignedIn(typeof json === 'string' ? JSON.parse(json) : json); };
-      window.__signInFail = function (m) { status(''); toast('साइन इन विफल: ' + m); };
-      try { window.AndroidBridge.signIn(); } catch (e) { status(''); toast('साइन इन उपलब्ध नहीं।'); }
+      window.__signInDone = function (json) { nativeSignedIn(typeof json === 'string' ? JSON.parse(json) : json, cid); };
+      window.__signInFail = function (m) { status(''); advance(); toast('साइन इन विफल — दोबारा "साइन इन" दबाएँ।'); };
+      try { window.AndroidBridge.signIn(cid || ''); } catch (e) { status(''); advance(); toast('साइन इन उपलब्ध नहीं।'); }
       return;
     }
-    if (googleConfigured) return gisSignIn();
+    if (CLIENT_IDS.length) return gisSignIn(cid);
     if (firebaseConfigured && state.firebaseReady) return firebaseSignIn();
     toast('क्लाउड सेट नहीं है।');
   }
@@ -162,7 +172,8 @@
     } catch (e) { return null; }
   }
 
-  function nativeSignedIn(res) {
+  function nativeSignedIn(res, cid) {
+    lockClient(cid);
     state.accessToken = res.accessToken || null;
     var info = res.idToken ? decodeJwt(res.idToken) : null;
     state.user = {

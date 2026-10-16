@@ -2,35 +2,36 @@
  * ============================================================
  *  Khatana Dairy Manager — cloud configuration
  * ============================================================
- *  Google Sign-In and Google Drive backup only need a Google
- *  OAuth *client ID*. Paste it in GOOGLE_OAUTH below.
+ *  Google Sign-In and Google Drive backup only need Google
+ *  OAuth *client ID*s (below). They do NOT need Firebase and
+ *  do NOT need an API key.
  *
- *  Firebase (Firestore sync) is OPTIONAL. It needs a Firebase
- *  *web* config (apiKey, authDomain, projectId, appId ...). Note:
- *  a Firebase web apiKey starts with "AIzaSy". A key starting
- *  with "AQ." is a Gemini/Vertex AI key and will NOT work here.
+ *  Both client ids are listed. The app tries them in order and
+ *  automatically falls back to the next one, so it does not
+ *  matter which is the "Android" client and which is the
+ *  "Web application" client.
  *
- *  Until you fill these in, the app still works 100% offline —
- *  the cloud section just shows a "not set up" note.
+ *  Firebase Authentication is OPTIONAL. On this project it is
+ *  NOT enabled yet. To use it:
+ *    1. Firebase Console -> Authentication -> Get started
+ *    2. Sign-in method -> Google -> Enable
+ *    3. Copy the full web app config into FIREBASE_CONFIG below.
+ *  A Firebase web apiKey starts with "AIzaSy".
+ *
+ *  Until then the app works 100% offline and the cloud section
+ *  shows a "not set up" note.
  * ============================================================
  */
 window.GOOGLE_OAUTH = {
-  clientId: "825594104011-h02pqq57t6iasr2h2qgnqceu1tbbp7oe.apps.googleusercontent.com"
+  clientIds: [
+    "825594104011-h02pqq57t6iasr2h2qgnqceu1tbbp7oe.apps.googleusercontent.com",
+    "825594104011-kp07lei9uc7qu2rrgm8hdu5hvspad9b7.apps.googleusercontent.com"
+  ]
 };
 
-/* Same client id is used by the Android app (see
- * android/app/src/main/assets/oauth.properties). For the APK to sign in,
- * this must be an "Android" OAuth client registered with the package name
- * com.khatana.dairymanager and the app's SHA-1. For the browser/PWA it must
- * be a "Web application" client with the site's origin authorised. */
-window.ANDROID_OAUTH = {
-  clientId: "825594104011-h02pqq57t6iasr2h2qgnqceu1tbbp7oe.apps.googleusercontent.com"
-};
-
-/* Optional — only needed for Firebase Authentication / Firestore.
-   Fill with your Firebase web app config to enable it. */
+/* Firebase web config (optional). apiKey added; fill the rest to enable it. */
 window.FIREBASE_CONFIG = {
-  apiKey: "PASTE_FIREBASE_WEB_API_KEY",
+  apiKey: "AIzaSyCr1LnVod5p1Nm6jUff0VcTE-MeCmMyLPc",
   authDomain: "PASTE_PROJECT.firebaseapp.com",
   projectId: "PASTE_PROJECT_ID",
   storageBucket: "PASTE_PROJECT.appspot.com",

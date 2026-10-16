@@ -53,6 +53,8 @@ public class MainActivity extends Activity {
     private WebView webView;
     private String clientId = "";
     private String redirectUri = "";
+    private String pendingClientId = "";
+    private String pendingRedirect = "";
     private String codeVerifier = "";
     private String accessToken = null;
     private String idToken = null;
@@ -103,16 +105,19 @@ public class MainActivity extends Activity {
         } catch (Exception e) {
             clientId = "";
         }
-        if (clientId.contains(".apps.googleusercontent.com")) {
-            String prefix = clientId.substring(0, clientId.indexOf(".apps.googleusercontent.com"));
-            redirectUri = "com.googleusercontent.apps." + prefix + ":/oauth2redirect";
-        } else {
-            redirectUri = "com.khatana.dairymanager:/oauth2redirect";
-        }
+        redirectUri = redirectFor(clientId);
     }
 
     private boolean isConfigured() {
         return !clientId.isEmpty() && clientId.indexOf("PASTE") == -1;
+    }
+
+    private static String redirectFor(String cid) {
+        if (cid != null && cid.contains(".apps.googleusercontent.com")) {
+            String prefix = cid.substring(0, cid.indexOf(".apps.googleusercontent.com"));
+            return "com.googleusercontent.apps." + prefix + ":/oauth2redirect";
+        }
+        return "com.khatana.dairymanager:/oauth2redirect";
     }
 
     @Override
@@ -145,17 +150,20 @@ public class MainActivity extends Activity {
 
     /* -------------------- OAuth -------------------- */
 
-    private void startSignIn() {
-        if (!isConfigured()) {
+    private void startSignIn(String cid) {
+        String useId = (cid != null && cid.length() > 0 && cid.indexOf("PASTE") == -1) ? cid : clientId;
+        if (useId == null || useId.isEmpty() || useId.indexOf("PASTE") != -1) {
             callJs("window.onAndroidSignInError", "OAuth client id not configured");
             return;
         }
+        pendingClientId = useId;
+        pendingRedirect = redirectFor(useId);
         try {
             codeVerifier = randomVerifier();
             String challenge = sha256Base64Url(codeVerifier);
             String url = AUTH_ENDPOINT
-                    + "?client_id=" + enc(clientId)
-                    + "&redirect_uri=" + enc(redirectUri)
+                    + "?client_id=" + enc(useId)
+                    + "&redirect_uri=" + enc(pendingRedirect)
                     + "&response_type=code"
                     + "&scope=" + enc(SCOPES)
                     + "&code_challenge=" + enc(challenge)
@@ -176,8 +184,8 @@ public class MainActivity extends Activity {
                 try {
                     String body = "grant_type=authorization_code"
                             + "&code=" + enc(code)
-                            + "&client_id=" + enc(clientId)
-                            + "&redirect_uri=" + enc(redirectUri)
+                            + "&client_id=" + enc(pendingClientId)
+                            + "&redirect_uri=" + enc(pendingRedirect)
                             + "&code_verifier=" + enc(codeVerifier);
                     HttpURLConnection c = (HttpURLConnection) new URL(TOKEN_ENDPOINT).openConnection();
                     c.setRequestMethod("POST");
@@ -415,7 +423,7 @@ public class MainActivity extends Activity {
         public boolean hasShare() { return true; }
 
         @JavascriptInterface
-        public void signIn() { runOnUiThread(new Runnable() { public void run() { startSignIn(); } }); }
+        public void signIn(final String cid) { runOnUiThread(new Runnable() { public void run() { startSignIn(cid); } }); }
 
         @JavascriptInterface
         public void signOut() { accessToken = null; idToken = null; }
